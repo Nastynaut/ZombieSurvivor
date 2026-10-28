@@ -1,0 +1,16 @@
+{
+    "name": "KnightSurvivors.Pooling",
+    "rootNamespace": "KnightSurvivors.Pooling",
+    "references": [
+        "KnightSurvivors.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

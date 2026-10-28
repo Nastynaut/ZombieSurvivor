@@ -1,0 +1,14 @@
+{
+    "name": "KnightSurvivors.Data",
+    "rootNamespace": "KnightSurvivors.Data",
+    "references": ["KnightSurvivors.Core"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
