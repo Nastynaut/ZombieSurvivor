@@ -1,0 +1,14 @@
+{
+    "name": "KnightSurvivors.Combat",
+    "rootNamespace": "KnightSurvivors.Combat",
+    "references": ["KnightSurvivors.Core", "KnightSurvivors.Data", "KnightSurvivors.Pooling"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
