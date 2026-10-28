@@ -69,7 +69,10 @@ namespace KnightSurvivors.Combat
             Vector3 aim = Owner.AimDirection;
             if (aim.sqrMagnitude < 0.0001f) aim = Vector3.forward;
 
+            // Start every swing with empty lists. They are reused (no garbage), so leftovers from the last
+            // swing would otherwise be hit again, wherever those enemies are now.
             hitThisSwing.Clear();
+            candidates.Clear();
             hitQuery.QueryEnemies(origin, radius, candidates);
 
             for (int s = 0; s < slashes; s++)
@@ -85,7 +88,15 @@ namespace KnightSurvivors.Combat
 
                     Vector3 toTarget = target.transform.position - origin;
                     toTarget.y = 0f;
-                    // Enemies standing right on top of the knight always count as "in the arc".
+
+                    // 1) RANGE: the GDD reach is the weapon's "area" (2.8 m at level 1, times the Area stat).
+                    //    We measure to the enemy's centre and add its body radius, so the blade only has to
+                    //    touch the edge of a zombie. Checked here too (not only in the query) so the arc test
+                    //    stays correct even if some other code hands us a longer list.
+                    float reach = radius + target.bodyRadius;
+                    if (toTarget.sqrMagnitude > reach * reach) continue;
+
+                    // 2) ANGLE: inside the 120° fan. Enemies standing right on top of the knight always count.
                     if (toTarget.sqrMagnitude > 0.25f && Vector3.Angle(slashDir, toTarget) > halfArc) continue;
 
                     float damage = RollDamage(out bool isCrit);

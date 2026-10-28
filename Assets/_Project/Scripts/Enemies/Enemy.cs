@@ -81,6 +81,7 @@ namespace KnightSurvivors.Enemies
             Definition = definition;
             contactDamage = contact;
             Health.ResetHealth(maxHealth);
+            Health.bodyRadius = Radius; // melee weapons use it for their reach check
             simPosition = position;
             previousPosition = position;
             velocity = Vector3.zero;

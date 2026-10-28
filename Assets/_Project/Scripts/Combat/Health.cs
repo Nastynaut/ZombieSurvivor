@@ -22,6 +22,9 @@ namespace KnightSurvivors.Combat
         [Tooltip("Flat damage reduction per hit. A hit always does at least 1 damage (GDD 3.1).")]
         public float armor;
 
+        [Tooltip("How wide the body is (m), seen from above. Melee range checks add this so a big zombie is hit when its edge, not its centre, is in reach. Enemies set it from their data at spawn.")]
+        public float bodyRadius;
+
         [Tooltip("Optional: where blood spawns. If empty, uses the VisualBinder hit socket or 1 m above the feet.")]
         public Transform hitPoint;
 

@@ -407,6 +407,9 @@ namespace KnightSurvivors.Enemies
         /// <summary>IHitQuery: all living zombies whose body overlaps the circle.</summary>
         public void QueryEnemies(Vector3 center, float radius, List<Health> results)
         {
+            // Empty the caller's list first. Weapons reuse one list for every swing (no garbage), so
+            // without this it would still hold last swing's enemies, some already dead or respawned elsewhere.
+            results.Clear();
             scratch.Clear();
             hash.Query(center, radius + 1f, scratch);
             for (int i = 0; i < scratch.Count; i++)
