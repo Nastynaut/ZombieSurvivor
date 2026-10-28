@@ -1,0 +1,23 @@
+{
+    "name": "KnightSurvivors.UI",
+    "rootNamespace": "KnightSurvivors.UI",
+    "references": [
+        "KnightSurvivors.Core",
+        "KnightSurvivors.Data",
+        "KnightSurvivors.Combat",
+        "KnightSurvivors.Player",
+        "KnightSurvivors.Progression",
+        "KnightSurvivors.Save",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

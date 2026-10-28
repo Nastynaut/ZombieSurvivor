@@ -1,0 +1,14 @@
+{
+    "name": "KnightSurvivors.Progression",
+    "rootNamespace": "KnightSurvivors.Progression",
+    "references": ["KnightSurvivors.Core", "KnightSurvivors.Data", "KnightSurvivors.Combat", "KnightSurvivors.Player", "KnightSurvivors.Save"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
