@@ -111,7 +111,7 @@ plain `PlayerInputState` (move, aim, point, dodge, pause) that the rest of the p
 or network input can later fill the same struct, and nothing else changes. It uses the `PlayerInput` component's
 actions (the `.inputactions` asset) and builds identical actions **in code as a fallback** if the asset is missing.
 Couch co-op hooks into `PlayerInputManager` joins (`PlayerSpawner.useJoinHook`).
-(One exception for now: the level-up and game-over screens read `Keyboard.current` for graybox hotkeys like 1–4 / R. Those move to a UI action map with the real menus.)
+(One exception for now: the level-up and game-over screens read `Keyboard.current` for graybox hotkeys like 1–4 / X (skip) / R. Skip is X, not S, because S is move-down. Tracked: move these to a UI action map so a keyboard player can't answer a gamepad player's level-up. Those move to a UI action map with the real menus.)
 > Project Settings → Player → **Active Input Handling** must be **Input System Package (New)** or **Both**.
 
 **Cinemachine 3** camera (GDD 2.2): `CinemachineCamera` with a fixed rotation **Euler(50, −45, 0)**, lens FOV **30**,

@@ -43,9 +43,21 @@ namespace KnightSurvivors.Player
             {
                 inputManager.playerPrefab = character.prefab;
                 inputManager.joinBehavior = PlayerJoinBehavior.JoinPlayersWhenButtonIsPressed;
+
+                // IMPORTANT: PlayerInputManager only raises its C# "onPlayerJoined" event when its
+                // notification behaviour is InvokeCSharpEvents. The default (SendMessages) would call a
+                // method by name instead, and our subscription below would silently never fire.
+                // Set it in code so it can't be wrong in the Inspector.
+                inputManager.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
                 inputManager.onPlayerJoined += OnPlayerJoined;
                 inputManager.EnableJoining();
                 return;
+            }
+
+            if (useJoinHook)
+            {
+                Debug.LogWarning("[PlayerSpawner] 'Use Join Hook' is on but there is no PlayerInputManager on " +
+                                 name + ". Spawning a single player instead.");
             }
 
             // One player: a normal Instantiate. Its PlayerInput then accepts keyboard+mouse AND gamepad

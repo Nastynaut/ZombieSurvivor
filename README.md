@@ -32,7 +32,7 @@ Without LFS, art files arrive as tiny text "pointer" files and Unity shows them 
 5. Press **Play** ▶.
 
 **Controls:** WASD / arrows or left stick = move. Mouse or right stick = aim (Assisted aim: the sword swings toward your aim).
-The sword attacks by itself. Walk near gems to collect XP. On level-up, click a card (or press 1/2/3/4; S = skip, R = reroll).
+The sword attacks by itself. Walk near gems to collect XP. On level-up, click a card (or press 1/2/3/4; X = skip, R = reroll. Skip is on X, not S, because S is move-down).
 Esc / Start is bound but the pause menu isn't built yet. When you die: **Restart** (or R / Enter) reloads the scene.
 
 ### Troubleshooting
@@ -88,7 +88,7 @@ Nothing here could be compiled or run on the build machine (Unity isn't installe
 - [ ] Zombies appear off-screen around you and walk in; Runners show up after minute 2.
 - [ ] Sword swings automatically in a 120° fan toward the mouse / right stick; zombies flash, bleed, die and sink.
 - [ ] Blood bursts and floor splats appear; splats darken after about 6 s; no frame hitch when many die.
-- [ ] Gems drop, fly to you when close, XP bar fills; **level-up pauses** the game and shows 3 cards; picking one resumes.
+- [ ] Gems drop, fly to you when close, XP bar fills; **level-up pauses** the game and shows 3 cards; picking one resumes. **X** skips, **R** rerolls, and holding **S** while it opens does NOT skip.
 - [ ] Let zombies kill you: **Game Over** screen appears; **Restart** reloads and plays again.
 - [ ] Console shows pool **growth warnings** only rarely (fine in a graybox; tell me which pool if spammy).
 - [ ] Stats (Profiler, optional): 300+ enemies at 60 fps.

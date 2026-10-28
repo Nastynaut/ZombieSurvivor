@@ -128,7 +128,7 @@ namespace KnightSurvivors.Pickups
                         if (d.x * d.x + d.z * d.z <= r * r)
                         {
                             gem.magnetized = true;
-                            gem.targetPlayerIndex = p;
+                            gem.targetPlayer = player;
                             gem.speed = startSpeed;
                             break;
                         }
@@ -137,10 +137,13 @@ namespace KnightSurvivors.Pickups
                     continue;
                 }
 
-                var target = gem.targetPlayerIndex >= 0 && gem.targetPlayerIndex < players.Count ? players[gem.targetPlayerIndex] : null;
+                var target = gem.targetPlayer;
                 if (target == null || target.IsDead)
                 {
-                    gem.magnetized = false; // owner died: drop back to the ground
+                    // Owner died or left the game (a destroyed player compares equal to null in Unity):
+                    // drop back to the ground so another player can pick it up.
+                    gem.magnetized = false;
+                    gem.targetPlayer = null;
                     continue;
                 }
 
@@ -169,25 +172,14 @@ namespace KnightSurvivors.Pickups
         /// <summary>Pull every gem to its nearest living player (for a future Holy Reliquary pickup).</summary>
         public void MagnetizeAll()
         {
-            var players = PlayerRegistry.Players;
             for (int i = 0; i < gems.Count; i++)
             {
                 var nearest = PlayerRegistry.GetNearestAlivePlayer(gems[i].transform.position);
                 if (nearest == null) return;
                 gems[i].magnetized = true;
-                gems[i].targetPlayerIndex = IndexOf(players, nearest);
+                gems[i].targetPlayer = nearest;
                 gems[i].speed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : 12f;
             }
-        }
-
-        private static int IndexOf(IReadOnlyList<PlayerController> list, PlayerController item)
-        {
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i] == item) return i;
-            }
-
-            return -1;
         }
     }
 }

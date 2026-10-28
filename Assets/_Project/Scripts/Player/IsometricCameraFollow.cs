@@ -25,6 +25,12 @@ namespace KnightSurvivors.Player
         private Vector3 focus;
         private Vector3 focusVelocity;
         private bool hasFocus;
+        private Camera cam; // cached once: GetComponent every frame is a needless lookup
+
+        private void Awake()
+        {
+            cam = GetComponent<Camera>();
+        }
 
         private void LateUpdate()
         {
@@ -63,7 +69,7 @@ namespace KnightSurvivors.Player
             Quaternion rot = Quaternion.Euler(pitch, -yaw, 0f);
             transform.rotation = rot;
             transform.position = focus - rot * Vector3.forward * (distance * zoom);
-            GetComponent<Camera>().fieldOfView = fieldOfView;
+            if (cam != null) cam.fieldOfView = fieldOfView;
         }
     }
 }

@@ -12,7 +12,11 @@ namespace KnightSurvivors.UI
     /// "Pick 1 of 3" screen. It only SHOWS what LevelUpService offers and forwards clicks back to it.
     /// The game is already paused by the service (timeScale 0); UI and the Input System still run
     /// while paused because they use unscaled time.
-    /// Controls: click a card, press 1/2/3 (or 4), gamepad: navigate + South button. Skip: S or the Skip button.
+    /// Controls: click a card, press 1/2/3 (or 4), gamepad: navigate + South button.
+    /// Skip: X or the Skip button. Reroll: R.
+    /// WHY X AND NOT S: S is "move down". A player who is holding or tapping S when the screen pops up
+    /// would skip the level-up by accident. Every key here (1-4, X, R) is unused by gameplay
+    /// (gameplay uses WASD, arrows, Space, Left Shift, Esc and Tab).
     /// </summary>
     [RequireComponent(typeof(Canvas))]
     public class LevelUpScreen : MonoBehaviour
@@ -25,6 +29,12 @@ namespace KnightSurvivors.UI
         private readonly List<Text> cardTexts = new List<Text>();
         private Button skipButton;
         private LevelUpService service;
+
+        // Keys are ignored for a moment after the screen opens, so a key that was already being
+        // pressed for something else can't pick a card by accident. Real (unscaled) seconds,
+        // because the game is paused (timeScale 0) while this screen is open.
+        private const float InputGraceSeconds = 0.25f;
+        private float acceptKeysAt;
 
         private void Awake()
         {
@@ -46,9 +56,13 @@ namespace KnightSurvivors.UI
                 cardTexts.Add(text);
             }
 
-            skipButton = UIFactory.CreateButton("Skip", bg.transform, "Skip (+3 Crowns, heal 5%)  [S]", 18, out _);
+            skipButton = UIFactory.CreateButton("Skip", bg.transform, "Skip (+3 Crowns, heal 5%)  [X]", 18, out _);
             UIFactory.Place((RectTransform)skipButton.transform, new Vector2(0.5f, 0.5f), new Vector2(360f, 50f), new Vector2(0f, -290f));
             skipButton.onClick.AddListener(() => service?.Skip());
+
+            // Key hint line, so players don't have to guess the shortcuts.
+            var hint = UIFactory.CreateText("KeyHint", bg.transform, "1-4 pick   |   X skip   |   R reroll", 16, TextAnchor.MiddleCenter);
+            UIFactory.Place(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(600f, 30f), new Vector2(0f, -340f));
 
             panel.SetActive(false);
         }
@@ -71,6 +85,7 @@ namespace KnightSurvivors.UI
         private void Show(IReadOnlyList<LevelUpOffer> offers)
         {
             panel.SetActive(true);
+            acceptKeysAt = Time.unscaledTime + InputGraceSeconds;
             for (int i = 0; i < cards.Count; i++)
             {
                 bool used = i < offers.Count;
@@ -92,13 +107,13 @@ namespace KnightSurvivors.UI
         {
             if (!panel.activeSelf || service == null) return;
             var kb = Keyboard.current;
-            if (kb == null) return;
+            if (kb == null || Time.unscaledTime < acceptKeysAt) return;
 
             if (kb.digit1Key.wasPressedThisFrame) service.Choose(0);
             else if (kb.digit2Key.wasPressedThisFrame) service.Choose(1);
             else if (kb.digit3Key.wasPressedThisFrame) service.Choose(2);
             else if (kb.digit4Key.wasPressedThisFrame) service.Choose(3);
-            else if (kb.sKey.wasPressedThisFrame) service.Skip();
+            else if (kb.xKey.wasPressedThisFrame) service.Skip();
             else if (kb.rKey.wasPressedThisFrame) service.Reroll();
         }
     }

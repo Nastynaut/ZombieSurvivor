@@ -79,12 +79,18 @@ namespace KnightSurvivors.Progression
             ServiceLocator.Unregister<IExperienceReceiver>(this);
         }
 
-        private void Update()
+        // FixedUpdate = the 50 Hz gameplay tick (GameTick). The run clock MUST live here, not in Update:
+        // Update runs once per rendered frame, so at 144 fps vs 30 fps the clock would cross minute
+        // boundaries on different ticks and the spawner (which also runs on the tick) would spawn
+        // differently. Counting whole ticks makes a seeded run replay exactly the same on every PC.
+        // It also pauses by itself: at timeScale 0 (level-up screen) Unity runs no FixedUpdates.
+        // [DefaultExecutionOrder(-100)] on this class means the clock ticks BEFORE the spawner reads it.
+        private void FixedUpdate()
         {
             if (State.isRunOver) return;
 
-            // Scaled time: the timer stops while the game is paused (level-up screen).
-            State.elapsedTime += Time.deltaTime;
+            State.elapsedTicks++;
+            State.elapsedTime = State.elapsedTicks * GameTick.TickDelta;
 
             // 10 Crowns for every full minute survived.
             int minutes = Mathf.FloorToInt(State.elapsedTime / 60f);

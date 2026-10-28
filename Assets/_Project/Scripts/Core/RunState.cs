@@ -15,7 +15,13 @@ namespace KnightSurvivors.Core
         /// <summary>Seed for this run's random numbers. Same seed = same spawns and cards.</summary>
         public int seed;
 
-        /// <summary>Seconds survived so far (stops counting when the run is over).</summary>
+        /// <summary>Gameplay ticks (50 per second) survived so far. This whole number is the "true" clock.</summary>
+        public int elapsedTicks;
+
+        /// <summary>
+        /// Seconds survived so far (stops counting when the run is over). Always worked out from
+        /// <see cref="elapsedTicks"/> (ticks x 0.02 s), so it never drifts and is identical in every replay.
+        /// </summary>
         public float elapsedTime;
 
         /// <summary>Total zombies killed by all players.</summary>
@@ -46,6 +52,7 @@ namespace KnightSurvivors.Core
         public void Begin(int newSeed)
         {
             seed = newSeed;
+            elapsedTicks = 0;
             elapsedTime = 0f;
             totalKills = 0;
             currentWaveIndex = -1;

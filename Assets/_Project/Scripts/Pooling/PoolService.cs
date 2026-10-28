@@ -37,6 +37,10 @@ namespace KnightSurvivors.Pooling
 
         // How many objects each pool has created, and the prewarm size we expected to be enough.
         private readonly Dictionary<GameObject, int> createdCounts = new Dictionary<GameObject, int>();
+
+        // instance -> its PooledObject, filled once when the instance is created. Spawn() runs hundreds of
+        // times a second; a dictionary lookup is cheaper than GetComponent and creates no garbage.
+        private readonly Dictionary<GameObject, PooledObject> pooledByInstance = new Dictionary<GameObject, PooledObject>(512);
         private readonly Dictionary<GameObject, int> prewarmSizes = new Dictionary<GameObject, int>();
 
         // One ObjectPool per prefab. The prefab GameObject itself is the dictionary key.
@@ -83,7 +87,7 @@ namespace KnightSurvivors.Pooling
             // Position BEFORE activating, so it never appears for a frame at its old position.
             instance.transform.SetPositionAndRotation(position, rotation);
             instance.SetActive(true);
-            instance.GetComponent<PooledObject>().NotifySpawned();
+            if (pooledByInstance.TryGetValue(instance, out var pooled)) pooled.NotifySpawned();
             return instance;
         }
 
@@ -141,7 +145,11 @@ namespace KnightSurvivors.Pooling
                 createFunc: () => CreateTracked(prefab, container, pool),
                 actionOnGet: null,      // Spawn() handles activation so it can position first
                 actionOnRelease: null,  // PooledObject.Despawn() handles deactivation
-                actionOnDestroy: obj => { if (obj != null) Destroy(obj); },
+                actionOnDestroy: obj =>
+                {
+                    if ((object)obj != null) pooledByInstance.Remove(obj); // (object) = real null check
+                    if (obj != null) Destroy(obj);
+                },
                 // collectionCheck = true would catch double-releases but costs time on every release.
                 // PooledObject already guards against double-release, so we keep it off for speed.
                 collectionCheck: false,
@@ -175,7 +183,7 @@ namespace KnightSurvivors.Pooling
             return CreateInstance(prefab, parent, pool);
         }
 
-        private static GameObject CreateInstance(GameObject prefab, Transform parent, ObjectPool<GameObject> pool)
+        private GameObject CreateInstance(GameObject prefab, Transform parent, ObjectPool<GameObject> pool)
         {
             var obj = Instantiate(prefab, parent);
             obj.name = prefab.name; // drop the "(Clone)" suffix
@@ -187,6 +195,7 @@ namespace KnightSurvivors.Pooling
             pooled.SourcePrefab = prefab;
             pooled.Poolables = obj.GetComponentsInChildren<IPoolable>(true);
             pooled.IsInPool = true;
+            pooledByInstance[obj] = pooled;
             return obj;
         }
     }

@@ -191,6 +191,10 @@ namespace KnightSurvivors.Gore
             // No red decals with Blood Off.
             if (Intensity == BloodIntensity.Off) return;
 
+            // INTENTIONAL: UnityEngine.Random (not the seeded RunRandom) for these cosmetic sizes and offsets.
+            // Gore is looks only. If it drew from the gameplay random stream, turning Blood Off (or a
+            // different particle budget) would change which upgrade cards and spawns a seed produces.
+            // Please don't "fix" this into RunRandom.
             for (int i = 0; i < smallDecals; i++) QueueDecal(ground, Random.Range(0.6f, 1.4f));
             for (int i = 0; i < largeDecals; i++)
             {
@@ -223,9 +227,10 @@ namespace KnightSurvivors.Gore
             var s = Settings;
             int maxSystems = s != null ? s.maxBloodSystems : 96;
             int maxParticles = s != null ? s.maxBloodParticles : 3000;
-            int live = CountLiveParticles();
+            int live = LiveParticlesThisFrame();
             int n = Mathf.Min(Mathf.RoundToInt(count), Mathf.Max(0, maxParticles - live));
             if (n <= 0) return;
+            liveParticlesCached += n; // keep this frame's estimate up to date without recounting
 
             // Too many systems alive? Steal the oldest (it is first in the list).
             if (bursts.Count >= maxSystems) ReturnBurst(0);
@@ -254,6 +259,24 @@ namespace KnightSurvivors.Gore
             ps.Emit(n);    // ...and we emit exactly the GDD count.
 
             bursts.Add(new ActiveBurst { system = ps, endTime = Time.time + burstLifetime });
+        }
+
+        // A sword swing into 30 zombies calls Burst 30 times in one frame. Counting every system's
+        // particles each time would be ~3000 reads, so we count once per frame and then just add
+        // what we emit. (Particles that expired this frame are counted until next frame: a tiny,
+        // safe over-estimate.)
+        private int liveParticlesFrame = -1;
+        private int liveParticlesCached;
+
+        private int LiveParticlesThisFrame()
+        {
+            if (liveParticlesFrame != Time.frameCount)
+            {
+                liveParticlesFrame = Time.frameCount;
+                liveParticlesCached = CountLiveParticles();
+            }
+
+            return liveParticlesCached;
         }
 
         private int CountLiveParticles()
@@ -408,7 +431,7 @@ namespace KnightSurvivors.Gore
             float y = 0.003f + (decalSpawnIndex++ % 8) * 0.0005f;
             d.transform.SetPositionAndRotation(
                 new Vector3(position.x, y, position.z),
-                Quaternion.Euler(90f, Random.Range(0f, 360f), 0f));
+                Quaternion.Euler(90f, Random.Range(0f, 360f), 0f)); // cosmetic-only Random (see the INTENTIONAL note above)
             d.baseSize = size;
             d.growth = 1f;
             d.spawnTime = Time.time;

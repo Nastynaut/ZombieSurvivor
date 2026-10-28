@@ -65,7 +65,8 @@ namespace KnightSurvivors.EditorTools
             {
                 m.teamPrimary[i] = Lit($"M_PH_Team_Primary_P{i + 1}", primary[i], 0.25f, 0f);
                 m.teamSecondary[i] = Lit($"M_PH_Team_Secondary_P{i + 1}", secondary[i], 0.35f, 0f);
-                // Ring: unlit, see-through (alpha 0.7), drawn AFTER the blood decals (queue 3010) so it stays visible.
+                // Ring: unlit, see-through (alpha 0.7), queue 3010. Blood decals use the AlphaTest queue (2450), so they are
+                // drawn first and the ring always ends up on top of them, staying visible.
                 m.ring[i] = Unlit($"M_PH_Ring_P{i + 1}", primary[i], 0.70f);
                 m.ring[i].renderQueue = 3010;
             }

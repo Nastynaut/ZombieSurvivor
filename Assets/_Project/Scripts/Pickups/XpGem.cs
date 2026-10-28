@@ -1,3 +1,4 @@
+using KnightSurvivors.Player;
 using KnightSurvivors.Pooling;
 using UnityEngine;
 
@@ -21,7 +22,10 @@ namespace KnightSurvivors.Pickups
 
         // Runtime data used by PickupManager.
         [HideInInspector] public bool magnetized;
-        [HideInInspector] public int targetPlayerIndex = -1;
+        // The player this gem is flying to. A direct reference, not a list index: if a co-op player
+        // leaves mid-run the PlayerRegistry list shifts, and an index would then point at someone else.
+        // [NonSerialized]: runtime-only, Unity should never save it into a prefab or scene.
+        [System.NonSerialized] public PlayerController targetPlayer;
         [HideInInspector] public float speed;
         [HideInInspector] public float spawnTime;
 
@@ -36,7 +40,7 @@ namespace KnightSurvivors.Pickups
         public void OnSpawned()
         {
             magnetized = false;
-            targetPlayerIndex = -1;
+            targetPlayer = null;
             speed = 0f;
             spawnTime = Time.time;
         }

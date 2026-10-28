@@ -27,7 +27,22 @@ namespace KnightSurvivors.Combat
         private readonly List<SlashVisual> visuals = new List<SlashVisual>(4);
         private IHitQuery hitQuery;
 
+        // Slash directions, measured from the aim direction (degrees around the vertical axis).
         private static readonly float[] SlashAngles = { 0f, 180f, 90f, -90f }; // front, rear, right, left
+
+        /// <summary>
+        /// GDD 3.2 direction pattern. "amount" is NOT simply "number of slashes":
+        ///   amount 1 -> 1 slash  (front)
+        ///   amount 2 -> 2 slashes (front + rear)
+        ///   amount 3 -> 4 slashes (front + rear + BOTH sides). Adding only one side would look lopsided.
+        /// Extra amount above 3 (from a future passive) changes nothing, because all 4 directions are used.
+        /// </summary>
+        private static int SlashCountForAmount(int amount)
+        {
+            if (amount <= 1) return 1;
+            if (amount == 2) return 2;
+            return 4;
+        }
 
         public override void Initialize(IWeaponOwner owner, Data.WeaponDefinition definition)
         {
@@ -62,7 +77,7 @@ namespace KnightSurvivors.Combat
 
             float radius = level.area * stats.area;
             float halfArc = Definition.arcDegrees * 0.5f;
-            int slashes = Mathf.Clamp(level.amount + stats.amount, 1, SlashAngles.Length);
+            int slashes = SlashCountForAmount(level.amount + stats.amount);
             int pierceLeft = level.pierce < 0 ? int.MaxValue : level.pierce;
 
             Vector3 origin = Owner.Position;

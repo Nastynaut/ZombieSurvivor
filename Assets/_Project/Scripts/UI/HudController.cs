@@ -22,6 +22,14 @@ namespace KnightSurvivors.UI
         private Text crownsText;
         private RunManager run;
 
+        // The last values we showed. Building a string ("Kills 42") creates garbage for the garbage
+        // collector, and GC spikes cause hitches. So we only rebuild a text when its number changed:
+        // the timer once per second, kills/crowns/level only when they go up. -1 = "nothing shown yet".
+        private int shownLevel = -1;
+        private int shownSeconds = -1;
+        private int shownKills = -1;
+        private int shownCrowns = -1;
+
         private void Awake()
         {
             var root = transform;
@@ -64,10 +72,33 @@ namespace KnightSurvivors.UI
             var state = run.State;
 
             xpFill.fillAmount = state.xpToNextLevel > 0 ? Mathf.Clamp01(state.runXp / state.xpToNextLevel) : 0f;
-            levelText.text = $"Lv {state.runLevel}";
-            timerText.text = UIFactory.FormatTime(state.elapsedTime);
-            killsText.text = $"Kills {state.totalKills}";
-            crownsText.text = $"Crowns {Mathf.FloorToInt(run.RunCrowns)}";
+            // Fill amounts are plain numbers (no garbage), so they can be set every frame.
+            // Texts are only rebuilt when the value they show actually changed.
+            if (state.runLevel != shownLevel)
+            {
+                shownLevel = state.runLevel;
+                levelText.text = "Lv " + shownLevel;
+            }
+
+            int seconds = Mathf.FloorToInt(state.elapsedTime);
+            if (seconds != shownSeconds)
+            {
+                shownSeconds = seconds;
+                timerText.text = UIFactory.FormatTime(seconds);
+            }
+
+            if (state.totalKills != shownKills)
+            {
+                shownKills = state.totalKills;
+                killsText.text = "Kills " + shownKills;
+            }
+
+            int crowns = Mathf.FloorToInt(run.RunCrowns);
+            if (crowns != shownCrowns)
+            {
+                shownCrowns = crowns;
+                crownsText.text = "Crowns " + crowns;
+            }
 
             var players = PlayerRegistry.Players;
             if (players.Count > 0 && players[0] != null && players[0].Health != null)

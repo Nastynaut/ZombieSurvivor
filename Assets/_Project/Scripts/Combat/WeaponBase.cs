@@ -25,6 +25,7 @@ namespace KnightSurvivors.Combat
         public WeaponLevel CurrentLevelData => Definition.GetLevel(Level);
 
         private float cooldownTimer;
+        private RunState run; // cached on the first hit (looking it up on every hit is wasted work)
 
         /// <summary>Called once by the PlayerLoadout right after the weapon is created.</summary>
         public virtual void Initialize(IWeaponOwner owner, WeaponDefinition definition)
@@ -77,7 +78,8 @@ namespace KnightSurvivors.Combat
             float damage = CurrentLevelData.damage * stats.might;
 
             isCrit = false;
-            if (ServiceLocator.TryGet(out RunState run) && run.Random != null)
+            if (run == null) ServiceLocator.TryGet(out run);
+            if (run != null && run.Random != null)
             {
                 isCrit = run.Random.Chance(stats.critChance);
             }
