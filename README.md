@@ -85,6 +85,7 @@ Nothing here could be compiled or run on the build machine (Unity isn't installe
 - [ ] Transparent materials look right: ground ring and sword slash are see-through (set by code; check the Inspector shows *Surface Type: Transparent*).
 - [ ] Press Play: knight moves with WASD and left stick; **W moves up the screen** (toward the top-left of the grid).
 - [ ] Camera looks down at about 50°, diagonal across the tiles, follows smoothly with a slight lookahead.
+- [ ] **Camera smoothness:** rebuild the scene first (**Knight Survivors → Build Graybox Scene**; the prefab and camera changed). Walk in circles and zig-zag with no zombies near you: the knight, its ground ring and the floor grid should glide with **no fast jitter**, also while turning. Then press **F1** (Console: `Camera shake: OFF`) and walk again; it should look exactly the same, since no shake code exists yet. If it still jitters, try the Game view with **VSync on** and tell me the frame rate.
 - [ ] Zombies appear off-screen around you and walk in; Runners show up after minute 2.
 - [ ] Sword swings automatically in a 120° fan toward the mouse / right stick; zombies flash, bleed, die and sink.
 - [ ] Blood bursts and floor splats appear; splats darken after about 6 s; no frame hitch when many die.
@@ -92,3 +93,5 @@ Nothing here could be compiled or run on the build machine (Unity isn't installe
 - [ ] Let zombies kill you: **Game Over** screen appears; **Restart** reloads and plays again.
 - [ ] Console shows pool **growth warnings** only rarely (fine in a graybox; tell me which pool if spammy).
 - [ ] Stats (Profiler, optional): 300+ enemies at 60 fps.
+
+> **TEMPORARY debug toggle (remove after the jitter check):** `cameraShakeEnabled` on `CFG_FeedbackSettings` (Inspector tick box, default on) and **F1** in Play mode flip a global camera-shake switch (`CameraShakeGate`) and log `Camera shake: ON/OFF`. There is no shake code yet (that comes with the juice PR), so it only proves that the jitter isn't shake. Files to delete afterwards: `Scripts/Cameras/CameraShakeDebugToggle.cs`, `Scripts/Core/CameraShakeGate.cs`, plus that field and the line in `GrayboxSceneBuilder` that adds the toggle.

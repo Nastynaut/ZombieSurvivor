@@ -32,6 +32,9 @@ namespace KnightSurvivors.Player
             cam = GetComponent<Camera>();
         }
 
+        // LateUpdate = after every Update, so the players' smoothed CameraTarget (moved by TickInterpolator in
+        // Update) is already at this frame's position. SmoothDamp uses Time.deltaTime (per rendered frame), NOT the
+        // 50 Hz fixed step, so the camera moves a little every frame instead of in 50 Hz steps.
         private void LateUpdate()
         {
             var players = PlayerRegistry.Players;
@@ -39,7 +42,7 @@ namespace KnightSurvivors.Player
             int count = 0;
             for (int i = 0; i < players.Count; i++)
             {
-                if (players[i] == null || players[i].IsDead) continue;
+                if (players[i] == null || players[i].IsDead || players[i].cameraTarget == null) continue;
                 sum += players[i].cameraTarget.position;
                 count++;
             }
@@ -51,7 +54,7 @@ namespace KnightSurvivors.Player
             float spread = 0f;
             for (int i = 0; i < players.Count; i++)
             {
-                if (players[i] == null || players[i].IsDead) continue;
+                if (players[i] == null || players[i].IsDead || players[i].cameraTarget == null) continue;
                 spread = Mathf.Max(spread, Vector3.Distance(players[i].cameraTarget.position, target));
             }
 

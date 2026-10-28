@@ -222,6 +222,8 @@ namespace KnightSurvivors.EditorTools
 
             systems.AddComponent<RunManager>().runConfig = data.runConfig;
             systems.AddComponent<LevelUpService>().runConfig = data.runConfig;
+            // TEMPORARY debug: F1 toggles camera shake (see CameraShakeDebugToggle). Remove with it.
+            systems.AddComponent<CameraShakeDebugToggle>().runConfig = data.runConfig;
 
             var enemies = systems.AddComponent<EnemyManager>();
             enemies.runConfig = data.runConfig;
@@ -278,12 +280,21 @@ namespace KnightSurvivors.EditorTools
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = PlaceholderFactory.Hex("#141821");
             main.AddComponent<AudioListener>();
-            main.AddComponent<CinemachineBrain>();
+            var brain = main.AddComponent<CinemachineBrain>();
+            // Move the camera in LateUpdate, every rendered frame. Our camera target is smoothed in Update
+            // (TickInterpolator), so by LateUpdate it's already at this frame's position. We set this on
+            // purpose instead of the default SmartUpdate: SmartUpdate guesses from how the target moves, and
+            // a target that steps in FixedUpdate would make it update the camera at 50 Hz (= jitter).
+            brain.UpdateMethod = CinemachineBrain.UpdateMethods.LateUpdate;
+            brain.BlendUpdateMethod = CinemachineBrain.BrainUpdateMethods.LateUpdate;
             main.AddComponent<UniversalAdditionalCameraData>();
 
             // Target group: Cinemachine frames the middle of all living players (couch co-op ready).
             var groupGo = new GameObject("PlayerTargetGroup");
-            groupGo.AddComponent<CinemachineTargetGroup>();
+            var targetGroup = groupGo.AddComponent<CinemachineTargetGroup>();
+            // The group recomputes its centre in LateUpdate, i.e. after the players' smoothed positions are
+            // set (Update) and in step with the brain above. (This is Cinemachine's default; set to be explicit.)
+            targetGroup.UpdateMethod = CinemachineTargetGroup.UpdateMethods.LateUpdate;
 
             // The Cinemachine camera: fixed rotation, so it never turns. Euler(50, -45, 0) makes the camera look
             // along world (-1, 0, 1). That's the "yaw 45" in the GDD (see TechPlan "Camera yaw convention").
@@ -305,6 +316,9 @@ namespace KnightSurvivors.EditorTools
             var look = composer.Lookahead;
             look.Enabled = true;
             look.Time = 0.24f;
+            // Lookahead estimates the target's velocity frame by frame. With a target that steps at 50 Hz, that
+            // estimate swings between 0 and "huge" and the camera shakes; with the smoothed target it's steady.
+            // The smoothing stays for gentle direction changes.
             look.Smoothing = 0.4f;
             look.IgnoreY = true;
             composer.Lookahead = look;

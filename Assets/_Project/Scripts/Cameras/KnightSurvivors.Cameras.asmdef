@@ -1,7 +1,7 @@
 {
     "name": "KnightSurvivors.Cameras",
     "rootNamespace": "KnightSurvivors.Cameras",
-    "references": ["KnightSurvivors.Core", "KnightSurvivors.Player", "Unity.Cinemachine"],
+    "references": ["KnightSurvivors.Core", "KnightSurvivors.Data", "KnightSurvivors.Player", "Unity.Cinemachine", "Unity.InputSystem"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

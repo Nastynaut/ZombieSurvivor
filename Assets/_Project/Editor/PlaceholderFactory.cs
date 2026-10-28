@@ -335,12 +335,17 @@ namespace KnightSurvivors.EditorTools
             tint.ringMaterials = (Material[])m.ring.Clone();
             tint.ringRenderers = new Renderer[] { R(disc), R(arrow) };
 
-            // Smooths the Visual between the 50 Hz physics ticks so movement doesn't stutter at high frame rates.
+            // What the camera follows. An empty child at the feet, smoothed like the model (below).
+            // NOT the root: the root only moves at 50 Hz, so a camera following it stutters (the "jitter" bug).
+            var cameraTarget = Empty("CameraTarget", root.transform, Vector3.zero);
+
+            // Smooths everything you SEE between the 50 Hz physics ticks: the model, the ground ring and the
+            // camera target. All three must be listed, or that one piece would visibly stutter at high frame rates.
             var interp = root.AddComponent<TickInterpolator>();
-            interp.smoothedChildren = new[] { visual };
+            interp.smoothedChildren = new[] { visual, ring, cameraTarget };
 
             var player = root.GetComponent<PlayerController>();
-            player.cameraTarget = root.transform;
+            player.cameraTarget = cameraTarget;
 
             return SavePrefab(root, PrefabsDir + "/PF_PH_Knight.prefab");
         }

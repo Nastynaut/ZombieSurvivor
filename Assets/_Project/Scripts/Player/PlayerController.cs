@@ -21,7 +21,9 @@ namespace KnightSurvivors.Player
     [RequireComponent(typeof(PlayerLoadout))]
     public class PlayerController : MonoBehaviour, IWeaponOwner
     {
-        [Tooltip("The transform the camera follows. Leave empty to use the interpolated 'Visual' child.")]
+        // IMPORTANT: this must be a SMOOTHED child (listed in TickInterpolator), never the root itself.
+        // The root only moves at 50 Hz, so a camera following it jitters at high frame rates.
+        [Tooltip("The transform the camera follows: the smoothed 'CameraTarget' child. Never the root (it moves at 50 Hz and makes the camera jitter). Leave empty to use the smoothed 'Visual' child.")]
         public Transform cameraTarget;
 
         [Tooltip("How long the red 'you got hurt' tint shows, in seconds (HitFeedbackProfile PlayerHurt flashMs overrides this).")]

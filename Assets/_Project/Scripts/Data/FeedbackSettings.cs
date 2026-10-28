@@ -76,6 +76,13 @@ namespace KnightSurvivors.Data
         [Tooltip("GDD 7.8: every pool can grow (always true; kept as data so it's documented). Caps above are enforced by recycling the oldest.")]
         public bool poolsGrowable = true;
 
+        [Header("TEMPORARY debug (remove after the camera-jitter investigation)")]
+        // TEMPORARY: a master switch for camera shake, so we can tell "shake" apart from "jitter".
+        // Untick it in the Inspector (CFG_FeedbackSettings) or press F1 in Play mode (CameraShakeDebugToggle).
+        // Any future shake code must check CameraShakeGate.Enabled before shaking.
+        [Tooltip("TEMPORARY debug: master switch for camera shake. F1 toggles it in Play mode. Note: there is no shake code yet (it comes with the juice PR), so this changes nothing today.")]
+        public bool cameraShakeEnabled = true;
+
         [Header("Options")]
         [Tooltip("Gore option: Off (grey dust, no decals) / Low (half) / Full (default).")]
         public BloodIntensity bloodIntensity = BloodIntensity.Full;
