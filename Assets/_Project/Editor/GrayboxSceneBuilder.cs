@@ -287,7 +287,13 @@ namespace KnightSurvivors.EditorTools
             // a target that steps in FixedUpdate would make it update the camera at 50 Hz (= jitter).
             brain.UpdateMethod = CinemachineBrain.UpdateMethods.LateUpdate;
             brain.BlendUpdateMethod = CinemachineBrain.BrainUpdateMethods.LateUpdate;
-            main.AddComponent<UniversalAdditionalCameraData>();
+            var cameraData = main.AddComponent<UniversalAdditionalCameraData>();
+            // Anti-aliasing. Without it, thin straight edges (the grout gaps between the floor tiles, the
+            // tile borders) "crawl" and flicker whenever the camera moves by less than a pixel, which looks
+            // like fast jitter across the whole screen even when the camera itself moves perfectly smoothly.
+            // SMAA is a cheap post-process filter that works whatever MSAA setting the URP asset has.
+            cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            cameraData.antialiasingQuality = AntialiasingQuality.High;
 
             // Target group: Cinemachine frames the middle of all living players (couch co-op ready).
             var groupGo = new GameObject("PlayerTargetGroup");
@@ -311,7 +317,12 @@ namespace KnightSurvivors.EditorTools
             // Position Composer: keeps the target at screen centre from a fixed distance, with no rotation.
             var composer = vcamGo.AddComponent<CinemachinePositionComposer>();
             composer.CameraDistance = 26f;
-            composer.Damping = new Vector3(0.25f, 0f, 0.25f);
+            // Damping axes are in the CAMERA's own space, not the world's: x = screen left/right, y = screen
+            // up/down, z = along the view direction. Because the camera looks 50° down, walking "up the screen"
+            // moves the target in BOTH y and z. With y = 0 and z = 0.25 those two parts followed differently
+            // (one instantly, one lagging), so the same walk felt different in each direction. Same value on
+            // all three axes = the camera trails the knight the same way whichever way it walks.
+            composer.Damping = new Vector3(0.25f, 0.25f, 0.25f);
             // GDD says "1.2 m lookahead". Cinemachine's lookahead is in SECONDS (max 1), so 0.24 s at 5 m/s = 1.2 m.
             var look = composer.Lookahead;
             look.Enabled = true;

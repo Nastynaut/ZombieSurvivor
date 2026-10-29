@@ -30,13 +30,27 @@ namespace KnightSurvivors.Core
             Time.fixedDeltaTime = TickDelta;
         }
 
-        /// <summary>How far we are between the last tick and the next one, 0..1. Use in Update/LateUpdate only.</summary>
+        /// <summary>
+        /// How far we are between the last tick and the next one, 0..1. Use in Update/LateUpdate only.
+        ///
+        /// Unity runs its fixed steps at the start of a frame until Time.fixedTime has caught up with Time.time,
+        /// so in Update (Time.time - Time.fixedTime) is normally between 0 and one tick. We divide by the SAME
+        /// Time.fixedDeltaTime that drives FixedUpdate (GameTick.Apply sets it to TickDelta), so there is only
+        /// one 50 Hz clock: no "two clocks drifting" beat.
+        ///
+        /// Defensive: if fixedTime is ever slightly AHEAD of Time.time (float rounding, odd platforms), the
+        /// value is negative; we wrap it to "1 + value" instead of clamping to 0. Clamping would freeze the
+        /// smoothed position on the previous tick for that frame and cause exactly the stutter we're avoiding.
+        /// </summary>
         public static float InterpolationAlpha
         {
             get
             {
-                if (Time.fixedDeltaTime <= 0f) return 1f;
-                return Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
+                float dt = Time.fixedDeltaTime;
+                if (dt <= 0f) return 1f;
+                float a = (Time.time - Time.fixedTime) / dt;
+                if (a < 0f) a += 1f;
+                return Mathf.Clamp01(a);
             }
         }
     }

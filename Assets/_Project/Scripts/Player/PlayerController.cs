@@ -23,7 +23,7 @@ namespace KnightSurvivors.Player
     {
         // IMPORTANT: this must be a SMOOTHED child (listed in TickInterpolator), never the root itself.
         // The root only moves at 50 Hz, so a camera following it jitters at high frame rates.
-        [Tooltip("The transform the camera follows: the smoothed 'CameraTarget' child. Never the root (it moves at 50 Hz and makes the camera jitter). Leave empty to use the smoothed 'Visual' child.")]
+        [Tooltip("The transform the camera follows: the smoothed 'CameraTarget' child. Never the root (it moves at 50 Hz and makes the camera jitter). Leave empty: a smoothed child is created at runtime.")]
         public Transform cameraTarget;
 
         [Tooltip("How long the red 'you got hurt' tint shows, in seconds (HitFeedbackProfile PlayerHurt flashMs overrides this).")]
@@ -50,6 +50,9 @@ namespace KnightSurvivors.Player
         public RuntimeStats Stats => State.stats;
         public Team Team => Team.Player;
         public Vector3 Position => transform.position;
+        // Smoothed feet point (moves every rendered frame). Visuals that should stick to the knight
+        // (the sword slash) parent to this instead of the 50 Hz root, or they would stutter while walking.
+        public Transform VisualAnchor => cameraTarget != null ? cameraTarget : transform;
         public Vector3 AimDirection => Aim != null ? Aim.AimDirection : transform.forward;
         public GameObject OwnerObject => gameObject;
         public bool CanAttack => !State.isDead;
@@ -73,7 +76,64 @@ namespace KnightSurvivors.Player
             Health.Damaged += OnDamaged;
             Health.Died += OnHealthDied;
 
-            if (cameraTarget == null) cameraTarget = binder != null && binder.visualRoot != null ? binder.visualRoot : transform;
+            EnsureSmoothedCameraTarget();
+        }
+
+        /// <summary>
+        /// Makes sure the camera (and the slash visuals) follow a SMOOTHED child, whatever the prefab says.
+        /// Done at runtime on purpose: an old prefab, a missing reference or a scene that wasn't rebuilt
+        /// must never be able to make the camera read the 50 Hz root again.
+        ///   - no TickInterpolator?            add one
+        ///   - no cameraTarget, or it IS the root? create a "CameraTarget" child at the feet
+        ///   - cameraTarget not smoothed?       register it with the TickInterpolator
+        /// Public so the TEMPORARY CameraRigSelfCheck can call it too. Returns true if it had to repair something.
+        /// </summary>
+        public bool EnsureSmoothedCameraTarget()
+        {
+            bool repaired = false;
+
+            var interpolator = GetComponent<TickInterpolator>();
+            if (interpolator == null)
+            {
+                interpolator = gameObject.AddComponent<TickInterpolator>();
+                repaired = true;
+            }
+
+            // The model should be smoothed too (otherwise it steps at 50 Hz while the camera glides).
+            if (binder != null && binder.visualRoot != null && binder.visualRoot.parent == transform &&
+                !interpolator.IsSmoothed(binder.visualRoot))
+            {
+                interpolator.AddSmoothedChild(binder.visualRoot);
+                repaired = true;
+            }
+
+            // The camera target must be a DIRECT child (so TickInterpolator can smooth it) and not the root.
+            if (cameraTarget == null || cameraTarget == transform || cameraTarget.parent != transform)
+            {
+                var existing = transform.Find("CameraTarget");
+                if (existing == null)
+                {
+                    existing = new GameObject("CameraTarget").transform;
+                    existing.SetParent(transform, false);
+                    existing.localPosition = Vector3.zero;
+                    existing.localRotation = Quaternion.identity;
+                }
+                cameraTarget = existing;
+                repaired = true;
+            }
+
+            if (!interpolator.IsSmoothed(cameraTarget))
+            {
+                interpolator.AddSmoothedChild(cameraTarget);
+                repaired = true;
+            }
+
+            if (repaired)
+            {
+                Debug.LogWarning($"[PlayerController] '{name}': camera target was not a smoothed child, repaired at runtime " +
+                                 "(re-run Tools > Knight Survivors > Build Graybox Scene to fix the prefab).", this);
+            }
+            return repaired;
         }
 
         private void OnDestroy()

@@ -19,6 +19,13 @@ namespace KnightSurvivors.Combat
         /// <summary>Position on the ground (feet).</summary>
         Vector3 Position { get; }
 
+        /// <summary>
+        /// A transform at the feet that moves SMOOTHLY every rendered frame (not only at the 50 Hz tick).
+        /// Weapon visuals that should stay attached to the owner (e.g. the sword slash) parent to this.
+        /// Gameplay maths must keep using Position.
+        /// </summary>
+        Transform VisualAnchor { get; }
+
         /// <summary>Flat, normalized direction directional weapons should fire in (decided by the aim rules).</summary>
         Vector3 AimDirection { get; }
 

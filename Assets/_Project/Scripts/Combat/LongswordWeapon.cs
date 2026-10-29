@@ -58,7 +58,11 @@ namespace KnightSurvivors.Combat
             var mesh = SlashVisual.BuildFanMesh(Definition.arcDegrees, 16);
             for (int i = 0; i < SlashAngles.Length; i++)
             {
-                var copy = Instantiate(slashVisualTemplate, transform);
+                // Parent to the owner's SMOOTHED anchor, not to this weapon. This weapon object sits under the
+                // player ROOT, which only moves at 50 Hz; a slash parented there stepped every tick while the
+                // knight and the camera glided, which read as fast jitter while walking (the sword swings
+                // on its cooldown even with no enemies around).
+                var copy = Instantiate(slashVisualTemplate, VisualParent());
                 copy.gameObject.name = "Slash_" + i;
                 copy.GetComponent<MeshFilter>().sharedMesh = mesh;
                 copy.gameObject.SetActive(false);
@@ -130,7 +134,28 @@ namespace KnightSurvivors.Combat
         private void ShowVisual(int index, Vector3 origin, Vector3 direction, float radius, float duration)
         {
             if (index >= visuals.Count) return;
-            visuals[index].Show(origin + Vector3.up * slashHeight, direction, radius, Mathf.Max(0.1f, duration));
+            // "origin" is the gameplay position (this tick). The visual is placed relative to its smoothed
+            // parent instead, so it appears exactly under the knight you SEE, not one tick ahead of it.
+            Transform parent = VisualParent();
+            bool attached = visuals[index].Parent == parent && parent != transform;
+            Vector3 position = attached ? parent.position : origin;
+            visuals[index].Show(position + Vector3.up * slashHeight, direction, radius, Mathf.Max(0.1f, duration));
+        }
+
+        // Where the slash copies live: the owner's smoothed VisualAnchor if it has one, else this weapon.
+        private Transform VisualParent()
+        {
+            Transform anchor = Owner != null ? Owner.VisualAnchor : null;
+            return anchor != null ? anchor : transform;
+        }
+
+        private void OnDestroy()
+        {
+            // The copies may live under the owner, not under us, so clean them up ourselves.
+            for (int i = 0; i < visuals.Count; i++)
+            {
+                if (visuals[i].Parent != null && visuals[i].Parent != transform) Destroy(visuals[i].GameObject);
+            }
         }
 
         private void Update()
@@ -151,6 +176,9 @@ namespace KnightSurvivors.Combat
             {
                 this.renderer = renderer;
             }
+
+            public Transform Parent => renderer != null ? renderer.transform.parent : null;
+            public GameObject GameObject => renderer != null ? renderer.gameObject : null;
 
             public void Show(Vector3 position, Vector3 direction, float slashRadius, float duration)
             {

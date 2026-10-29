@@ -42,9 +42,22 @@ namespace KnightSurvivors.Player
         // The rotation we wrote last frame. If a child's rotation is different next frame, other code
         // changed it on purpose (e.g. the graybox death pose tips the knight over), so we adopt it.
         private Quaternion[] lastWrittenRotations;
+        private bool initialized;
+
+        /// <summary>The alpha used for the last smoothing pass (shown by the TEMPORARY jitter readout).</summary>
+        public float LastAlpha { get; private set; }
 
         private void Awake()
         {
+            EnsureInitialized();
+        }
+
+        // Lazy set-up, because other components (PlayerController.Awake) may add children before our Awake runs.
+        private void EnsureInitialized()
+        {
+            if (initialized) return;
+            initialized = true;
+
             if (smoothedChildren == null) smoothedChildren = new Transform[0];
             int n = smoothedChildren.Length;
             baseLocalPositions = new Vector3[n];
@@ -60,6 +73,37 @@ namespace KnightSurvivors.Player
             }
 
             Snap();
+        }
+
+        /// <summary>True if this child is being smoothed.</summary>
+        public bool IsSmoothed(Transform child)
+        {
+            if (smoothedChildren == null || child == null) return false;
+            for (int i = 0; i < smoothedChildren.Length; i++)
+            {
+                if (smoothedChildren[i] == child) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Start smoothing one more DIRECT child (used at runtime so an old prefab can't leave the camera
+        /// target unsmoothed). Call it while the child is at its normal resting pose.
+        /// </summary>
+        public void AddSmoothedChild(Transform child)
+        {
+            EnsureInitialized();
+            if (child == null || child.parent != transform || IsSmoothed(child)) return;
+
+            int n = smoothedChildren.Length;
+            System.Array.Resize(ref smoothedChildren, n + 1);
+            System.Array.Resize(ref baseLocalPositions, n + 1);
+            System.Array.Resize(ref baseLocalRotations, n + 1);
+            System.Array.Resize(ref lastWrittenRotations, n + 1);
+            smoothedChildren[n] = child;
+            baseLocalPositions[n] = child.localPosition;
+            baseLocalRotations[n] = child.localRotation;
+            lastWrittenRotations[n] = child.localRotation;
         }
 
         /// <summary>Forget history (call after teleporting), so nothing slides across the map.</summary>
@@ -79,12 +123,17 @@ namespace KnightSurvivors.Player
 
         private void Update()
         {
+            EnsureInitialized();
             float alpha = GameTick.InterpolationAlpha;
+            LastAlpha = alpha;
             Vector3 smoothedPosition = Vector3.Lerp(previousPosition, currentPosition, alpha);
             Quaternion smoothedRotation = Quaternion.Slerp(previousRotation, currentRotation, alpha);
 
-            // Child world pose we want = smoothed root pose * the child's normal offset.
-            // Convert that back into the real root's local space, because children are positioned locally.
+            // HOW THE CHILDREN ARE WRITTEN (and why that cancels the parent's steps):
+            // We decide the child's WORLD pose first (smoothed root pose * the child's normal offset), then
+            // convert it into the real root's local space using the root's CURRENT pose. Unity then computes
+            // world = root * local = exactly the smoothed pose. So the root's 50 Hz steps don't "leak" into
+            // the child: whatever the root does, this frame's local offset undoes it.
             Quaternion inverseRoot = Quaternion.Inverse(transform.rotation);
             for (int i = 0; i < smoothedChildren.Length; i++)
             {
