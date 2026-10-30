@@ -332,7 +332,7 @@ Set `chestSpinSeconds` **1.5**, `rerollPerChest` **1**.
 Rules that stay in code, with no new number:
 
 - Card pool: owned weapons and passives under max level, plus a new weapon or passive if that slot type has room. Banished items stay out. The same item never appears twice in one roll.
-- Skip is unlimited (§3.1 `skips` −1, §4.3). §8.4 says the skip counter goes down. That sentence disagrees with §3.1 and §4.3. Implement unlimited. Do not add `PlayerStats.skips`: §9.11 and `PlayerStats.cs` both omit it, and a −1 counter is not read by anything.
+- Skip is unlimited (§3.1 `skips` −1, §4.3, and §8.4). It does not spend a counter. Reroll and Banish still do. Unlimited skips are pending Dustin's confirmation (GDD v0.4 changelog). Do not add `PlayerStats.skips`: §9.11 and `PlayerStats.cs` both omit it, and a −1 counter is not read by anything.
 - Gold Pouch **+25** crowns and Roast Chicken **30** HP already match `LevelUpService.GoldPouchCrowns` and `RoastChickenHeal`. Do not add fields and do not point the fallback card at the brazier Coin Pouch, which is **+10**. `PickupType.CoinPouch` is the code's token for the Gold Pouch card title.
 - "Luck multiplies the chance of 3 and 5" (§4.3) has **no coefficient**. Do not add one.
 - Same item never twice. Owned weight 1.5, new weight 1.0. 4th card only from the luck formula above. Base luck 1.0 gives 0.
@@ -610,13 +610,13 @@ Already called out in the (c) tables. Collected here:
 7. **Factory content** is the slice subset: Longsword only, three passives, Shambler and Runner, no attacks, no recipes, no meta, schedule minutes 0–9 with Bloater/Spitter folded into Shambler. Those assets match §8.1, not §3–§5.
 8. **`ignoreCap`.** Initializer and the §9.7 sample are true. §5 prose: swarms overflow by at most +80; only elites and the boss ignore the cap. This sheet follows §5.
 9. **Minute-15 cap.** §1.2 says "cap 40 live". The §5 spawner still emits `spawnRatePerSec` when `alive > targetAlive`, until `hardCap` 350. Data stays target 40 and rate 1.5. Do not add a third number. Supervisor call if the trickle must hard-stop at 40.
-10. **Skip counter.** §8.4 says the skip counter goes down. §3.1 and §4.3 say unlimited. Implement unlimited. `PlayerStats` has no `skips` field (§9.11 doesn't either).
+10. **Skip counter.** Resolved in GDD v0.4: §8.4 matches §3.1 and §4.3. Skip is unlimited and does not decrement a counter. Reroll and Banish still do. Pending Dustin's confirmation. Do not add `PlayerStats.skips` (§9.11 and the class both omit it).
 11. **Fallback card token.** `PickupType` has `CoinPouch`, not Gold Pouch. Card pays 25 via `GoldPouchCrowns`. Brazier pouch pays 10. Do not share one payout.
 12. **`fallbackCards` order.** Initializer is RoastChicken then CoinPouch. GDD names Gold Pouch then Roast Chicken.
 13. **Slice boss vs full boss.** §8.1 is 8000 HP at 10:00 with no phase 2. §3.5 is 18000 HP at 15:00 with phase 2 and Bile Wave. One asset (`ENM_RottingKing`) holds the full boss only.
 14. **Passive field name.** GDD §9.5 writes the column as `required passive` (with a space). The C# field is `requiredPassive`. Same slot. Use the code name.
 15. **Consecrated Ground tick** cannot live in both `hitInterval` and per-level `cooldown`. Use `cooldown`.
-16. **Camera lookahead** (not a data table, do not "fix" it from this sheet): GDD §2.1 `lookAhead` 1.2 m. `PlayerCameraGroup.lookaheadEnabled` defaults **false** (Dustin's preference, recorded in code). Leave it.
+16. **Camera lookahead.** Resolved in GDD v0.4. Default is off: `PlayerCameraGroup.lookaheadEnabled` is false, so the camera stays centered on the knight. When the toggle is on, lead = velocity × `lookaheadTime` **0.24 s**, which is **1.2 m** at the base 5 m/s. Ease out is `lookaheadSmoothTime` **0.4 s**. Ease back is `lookaheadReleaseSmoothTime` **0.5 s**. Not a data-table field. Do not force lookahead on.
 
 `LevelUpRules` numeric defaults, `MetaUpgrade` cost formula, `XpCurve` defaults, `CoopScaling` arrays, and `FeedbackSettings` juice numbers match the GDD and are out of scope for this fill except `chestSpinSeconds` and `rerollPerChest`. `FeedbackSettings.maxDecals` defaults to **100** (slice). The GDD's later full-game cap is 48. Not part of these four tables. Do not change it here.
 
