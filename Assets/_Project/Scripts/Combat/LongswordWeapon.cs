@@ -105,7 +105,10 @@ namespace KnightSurvivors.Combat
                     if (target == null || target.IsDead || target.team == Owner.Team) continue;
                     if (hitThisSwing.Contains(target)) continue;
 
-                    Vector3 toTarget = target.transform.position - origin;
+                    // Use SimulatedPosition (the tick position), NOT transform.position (the drawn/smoothed
+                    // model). A fast zombie can be half a step ahead of its mesh; hitting the mesh would
+                    // miss the sim body, and the reverse would hit empty air where the model still is.
+                    Vector3 toTarget = target.SimulatedPosition - origin;
                     toTarget.y = 0f;
 
                     // 1) RANGE: the GDD reach is the weapon's "area" (2.8 m at level 1, times the Area stat).

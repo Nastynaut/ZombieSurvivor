@@ -110,6 +110,10 @@ namespace KnightSurvivors.Gore
                 if (critBloodPrefab != null) pool.Prewarm(critBloodPrefab.gameObject, s.bloodPrewarmCrit);
                 if (killBloodPrefab != null) pool.Prewarm(killBloodPrefab.gameObject, s.bloodPrewarmKill);
                 if (bigBloodPrefab != null) pool.Prewarm(bigBloodPrefab.gameObject, bigBloodPrewarm);
+                // Blood Off swaps every burst to dustPrefab. Prewarm it too so the first Off hit
+                // does not grow the pool (and log a pool-growth warning) mid-fight. Same starting
+                // size as hit blood — there is no separate dust count in the GDD.
+                if (dustPrefab != null) pool.Prewarm(dustPrefab.gameObject, s.bloodPrewarmHit);
             }
 
             // Decals are a fixed ring of objects we own (never grows; oldest is recycled).

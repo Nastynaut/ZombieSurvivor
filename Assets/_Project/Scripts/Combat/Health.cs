@@ -40,6 +40,16 @@ namespace KnightSurvivors.Combat
         /// <summary>HP as 0..1 for health bars.</summary>
         public float Normalized => maxHealth > 0f ? CurrentHealth / maxHealth : 0f;
 
+        /// <summary>
+        /// Where this body is for GAMEPLAY this tick (hit tests, range checks).
+        ///
+        /// WHY THIS EXISTS: zombies are drawn with a smoothed transform (part-way between the last two
+        /// 50 Hz ticks), but weapons fire on the tick and must test against where the zombie IS in the
+        /// simulation, not where its model is drawn this frame. EnemyManager writes this every tick from
+        /// <c>Enemy.simPosition</c>. Players leave it alone; it stays equal to <see cref="Transform.position"/>.
+        /// </summary>
+        public Vector3 SimulatedPosition { get; set; }
+
         // Dodge i-frames (dodge roll comes later): no damage until this time.
         private float invulnerableUntil;
 
@@ -49,6 +59,8 @@ namespace KnightSurvivors.Combat
         {
             binder = GetComponent<VisualBinder>();
             if (CurrentHealth <= 0f && !IsDead) CurrentHealth = maxHealth;
+            // Default: same as the transform. Enemies overwrite this every tick.
+            SimulatedPosition = transform.position;
         }
 
         /// <summary>Where blood / damage numbers should appear.</summary>
