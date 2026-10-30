@@ -1,6 +1,7 @@
 using System.IO;
 using KnightSurvivors.Combat;
 using KnightSurvivors.Core;
+using KnightSurvivors.Data;
 using KnightSurvivors.Enemies;
 using KnightSurvivors.Pickups;
 using KnightSurvivors.Player;
@@ -262,7 +263,7 @@ namespace KnightSurvivors.EditorTools
 
         // ------------------------------------------------------------------ knight (PlaceholderSpec 2.1)
 
-        public static GameObject BuildKnight(Materials m, InputActionAsset actions)
+        public static GameObject BuildKnight(Materials m, InputActionAsset actions, CharacterDefinition character)
         {
             var root = new GameObject("PF_PH_Knight");
             var p1Primary = m.teamPrimary[0];
@@ -279,15 +280,15 @@ namespace KnightSurvivors.EditorTools
             // Visual: swappable art root. Real FBX goes under Visual/ModelOffset; primitives are the fallback.
             var visual = Empty("Visual", root.transform, Vector3.zero);
 
-            // Try the Tripo Sir Aldric FBX first. If the file is missing (or not imported yet), fall back
-            // to the old capsule knight so the graybox still runs.
+            // Art comes from CharacterDefinition.visualModel (wired by GameDataFactory.EnsureSirAldricArtRefs).
+            // Null / missing → old capsule knight so the graybox still runs.
             Renderer[] bodyRenderers;
             Renderer[] teamPrimaryRenderers;
             Renderer[] teamSecondaryRenderers;
             Renderer weaponRenderer;
             Transform socketWeapon;
 
-            bool usedFbx = TryAttachSirAldricModel(visual, out bodyRenderers);
+            bool usedFbx = TryAttachSirAldricModel(visual, character, out bodyRenderers);
             if (usedFbx)
             {
                 // Tripo pilot has no separate tabard / plume / shield meshes for team tint yet.
@@ -399,50 +400,53 @@ namespace KnightSurvivors.EditorTools
         }
 
         /// <summary>
-        /// Parent SirAldric.fbx under Visual/ModelOffset with Z-up→Y-up, ~1.8 m height, feet at y=0.
-        /// Returns false if the FBX is missing so the caller can use primitives instead.
+        /// Parent <see cref="CharacterDefinition.visualModel"/> under Visual/ModelOffset with
+        /// Z-up→Y-up, yaw, ~1.8 m height, feet at y=0. Returns false if visualModel is null.
         ///
         /// WHY ModelOffset (not .meta)?
         /// Dustin lets Unity generate .meta files — we must NOT hand-write FBX import settings.
-        /// So axis / scale / pivot fixes live on this empty transform instead.
+        /// So axis / scale / pivot / yaw fixes live on this empty (+ <see cref="ModelOffsetYaw"/>).
         ///
         /// FBX facts (parsed from the binary file, Vertices + GlobalSettings):
         ///   UpAxis metadata = Y (1), but mesh height is along Z (~0.998 m), feet at Z=-0.5 (centered pivot).
         ///   UnitScaleFactor = 1.0 (Autodesk cm convention). Vertex numbers are ~1 m already, so Unity's
         ///   default "Convert Units" makes the mesh ~100× too small — we fix that by measuring bounds
         ///   AFTER instantiate and scaling to KnightTargetHeightM (that automatically eats the 100×).
+        ///
+        /// Facing (vertex asymmetry): denser verts on -Y ≈ shield arm = character's LEFT ⇒ file front is -X.
+        /// Up-fix alone is Rx(-90): (x,y,z)→(x,z,-y); file -X stays -X. Yaw +90° around Y then maps
+        /// -X → +Z (Unity forward / move direction). Old combined Euler(-90,180,0) = Ry(180)*Rx(-90)
+        /// mapped -X → +X, so the facing indicator sat on the knight's LEFT (Dustin playtest).
+        /// Default visualModelYawOffset = 90 (= -90 relative to that old 180).
         /// </summary>
-        private static bool TryAttachSirAldricModel(Transform visual, out Renderer[] bodyRenderers)
+        private static bool TryAttachSirAldricModel(
+            Transform visual, CharacterDefinition character, out Renderer[] bodyRenderers)
         {
             bodyRenderers = null;
 
-            // Application.dataPath = <Project>/Assets. Prefer that over File.Exists("Assets/...") which
-            // depends on the process working directory.
-            string fullPath = Path.Combine(Application.dataPath, "Art/Characters/SirAldric/SirAldric.fbx");
-            if (!File.Exists(fullPath))
+            // Source of truth: CharacterDefinition.visualModel (no hardcoded path in the attach path).
+            GameObject modelAsset = character != null ? character.visualModel : null;
+            if (modelAsset == null)
             {
-                Debug.LogWarning("[Knight Survivors] Sir Aldric FBX not found at " + SirAldricFbxPath +
-                                 " — using primitive placeholder knight.");
+                Debug.LogWarning("[Knight Survivors] CharacterDefinition.visualModel is null — " +
+                                 "using primitive placeholder knight. Assign SirAldric.fbx on CHR_SirAldric " +
+                                 "(GameDataFactory does this on Build Graybox Scene).");
                 return false;
             }
 
-            // First import creates Unity's default .meta (we never hand-write one).
-            AssetDatabase.ImportAsset(SirAldricFbxPath, ImportAssetOptions.ForceSynchronousImport);
-            var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(SirAldricFbxPath);
-            if (modelAsset == null)
-            {
-                Debug.LogWarning("[Knight Survivors] Could not load " + SirAldricFbxPath +
-                                 " — using primitive placeholder knight.");
-                return false;
-            }
+            float yawDegrees = character != null ? character.visualModelYawOffset : 90f;
 
             // Intermediate offset: Visual stays at identity (death tip / facing use it); fixes go here.
             var modelOffset = Empty("ModelOffset", visual, Vector3.zero);
-
-            // -90° X: Z-up mesh → Y-up. +180° Y: after that spin the mesh faced -Z; Unity forward is +Z.
-            modelOffset.localRotation = Quaternion.Euler(-90f, 180f, 0f);
             modelOffset.localScale = Vector3.one;
             modelOffset.localPosition = Vector3.zero;
+
+            // ModelOffsetYaw: Rx(-90) first, then yaw around Y. Live-tweakable on the prefab;
+            // CHR_SirAldric.visualModelYawOffset is the rebuild source of truth.
+            var yawComp = modelOffset.gameObject.AddComponent<ModelOffsetYaw>();
+            yawComp.upAxisEulerDegrees = new Vector3(-90f, 0f, 0f);
+            yawComp.yawOffsetDegrees = yawDegrees;
+            yawComp.Apply();
 
             // Object.Instantiate (not PrefabUtility.InstantiatePrefab): the FBX is baked into
             // PF_PH_Knight by SaveAsPrefabAsset below, so we don't need a live prefab link.
@@ -452,7 +456,12 @@ namespace KnightSurvivors.EditorTools
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
 
-            // Prefab rule: no colliders on visual children (root CharacterController is the only one).
+            // Prefab rule: Visual children must not fight the root CharacterController / our own anim.
+            // Strip Animator (imported FBX often has one), Rigidbody, and Collider under Visual.
+            foreach (var anim in instance.GetComponentsInChildren<Animator>(true))
+                Object.DestroyImmediate(anim);
+            foreach (var rb in instance.GetComponentsInChildren<Rigidbody>(true))
+                Object.DestroyImmediate(rb);
             foreach (var col in instance.GetComponentsInChildren<Collider>(true))
                 Object.DestroyImmediate(col);
 
@@ -478,8 +487,9 @@ namespace KnightSurvivors.EditorTools
             modelOffset.localPosition = new Vector3(0f, -b.min.y, 0f);
 
             bodyRenderers = instance.GetComponentsInChildren<Renderer>(true);
-            Debug.Log("[Knight Survivors] Sir Aldric FBX attached under Visual/ModelOffset. " +
-                      "preScaleHeight=" + (KnightTargetHeightM / scale).ToString("F4") +
+            Debug.Log("[Knight Survivors] Sir Aldric visualModel attached under Visual/ModelOffset. " +
+                      "yaw=" + yawDegrees.ToString("F1") +
+                      " preScaleHeight=" + (KnightTargetHeightM / scale).ToString("F4") +
                       "m scale=" + scale.ToString("F3") +
                       " yOffset=" + modelOffset.localPosition.y.ToString("F3") +
                       " rot=" + modelOffset.localEulerAngles +
