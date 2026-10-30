@@ -89,8 +89,17 @@ namespace KnightSurvivors.Cameras
                 spread = Mathf.Max(spread, Vector3.Distance(centre, p.cameraTarget.position));
             }
 
-            float t = Mathf.Clamp01(spread / spreadForMaxZoom);
-            composer.CameraDistance = baseDistance * Mathf.Lerp(1f, maxZoomOut, t);
+            // One living player: the distance is EXACTLY baseDistance (26 m), not "26 times a tiny spread
+            // factor". Cinemachine applies distance changes instantly (no damping), so even a flickering
+            // 0.001 m would move the camera along its view axis, i.e. on screen-vertical + depth.
+            float distance = baseDistance;
+            if (alive > 1)
+            {
+                float t = Mathf.Clamp01(spread / spreadForMaxZoom);
+                distance = baseDistance * Mathf.Lerp(1f, maxZoomOut, t);
+            }
+            // Only write when it really changes, so nothing touches the composer while walking alone.
+            if (composer.CameraDistance != distance) composer.CameraDistance = distance;
         }
     }
 }

@@ -128,6 +128,10 @@ namespace KnightSurvivors.Player
                 repaired = true;
             }
 
+            // The camera target follows the smoothed position but NEVER rotates (only the model turns).
+            // Not counted as a "repair": it's how the target is always meant to behave.
+            interpolator.SetPositionOnly(cameraTarget);
+
             if (repaired)
             {
                 Debug.LogWarning($"[PlayerController] '{name}': camera target was not a smoothed child, repaired at runtime " +

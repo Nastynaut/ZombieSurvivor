@@ -1,42 +1,109 @@
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace KnightSurvivors.Cameras
 {
     /// <summary>
     /// TEMPORARY (camera jitter diagnostics, remove in the PR #1 cleanup).
     ///
-    /// Adds the camera debug tools (F2 follow toggle, F3 readout, wiring self-check) to every scene that
-    /// has a Cinemachine main camera, from code. So nobody has to rebuild the scene to get them, and
-    /// deleting this folder's TEMPORARY files later removes them completely.
+    /// BACKUP way to get the camera debug tools (F2 follow toggle, F3 readout, wiring self-check). The main
+    /// way is that the scene builder now puts them straight on the "Systems" object. This bootstrap only
+    /// adds them when the scene doesn't already have them (an old scene that wasn't rebuilt).
+    ///
+    /// WHY IT IS BUILT LIKE THIS (the a3146a4 version sometimes showed nothing at all):
+    /// The old version ran ONCE right after the scene loaded and silently gave up if Camera.main or the
+    /// CinemachineBrain wasn't there at that exact moment, so no readout and no F2/F3 ever existed and
+    /// there was no message saying why. Now:
+    ///   1. It logs the moment it runs (so the Console proves the bootstrap happened).
+    ///   2. It ALWAYS creates the debug object, straight away, and keeps it alive across scene reloads
+    ///      (DontDestroyOnLoad), whatever the scene contains.
+    ///   3. The debug object itself (CameraDebugHost) looks for the camera every frame until it finds it,
+    ///      and again after a restart reloads the scene. The readout says "camera not found" meanwhile.
     /// </summary>
     public static class CameraDebugBootstrap
     {
         private static GameObject installed;
 
+        // With "Enter Play Mode Options" (no domain reload) static fields survive between Play sessions.
+        // SubsystemRegistration runs first thing in every Play session, so we reset them there.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            installed = null;
+            CameraDebugHost.Instance = null;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void OnFirstSceneLoaded()
-        {
-            // Also run after later scene loads (restarting a run reloads the scene).
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            Install();
-        }
-
-        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            Install();
-        }
-
         private static void Install()
         {
-            if (installed != null) return; // already there (Unity's == null also catches a destroyed object)
+            Debug.Log("[TEMP DEBUG] CameraDebugBootstrap running, build " + CameraJitterReadout.BuildStamp +
+                      " (camera diagnostics: readout ON by default, F3 hides it, F2 switches follow mode).");
+            if (installed != null) return; // Unity's == null is also true for a destroyed object
+
+            // AfterSceneLoad runs after the scene objects' Awake/OnEnable, so if the scene builder already
+            // put a CameraDebugHost on "Systems", it has registered itself by now and we're not needed.
+            if (CameraDebugHost.Instance != null)
+            {
+                Debug.Log("[TEMP DEBUG] Camera diagnostics found in the scene on '" + CameraDebugHost.Instance.name + "'.");
+                return;
+            }
+
+            installed = new GameObject("TEMP_CameraDebug");
+            Object.DontDestroyOnLoad(installed);
+            installed.AddComponent<CameraDebugHost>();
+        }
+    }
+
+    /// <summary>
+    /// TEMPORARY. Lives on "Systems" (added by the scene builder) or on TEMP_CameraDebug (added by the
+    /// bootstrap above for old scenes). Makes sure the readout, F2 toggle and self-check exist next to it
+    /// (re-using ones the builder already added), then finds the main camera / brain / virtual camera whenever they
+    /// are missing (first frames, after a scene reload) and hands them to the toggle and the self-check.
+    /// </summary>
+    [DefaultExecutionOrder(-1000)] // wire things up before the other debug scripts run this frame
+    public class CameraDebugHost : MonoBehaviour
+    {
+        private CameraFollowModeToggle toggle;
+        private CameraRigSelfCheck check;
+        private bool loggedWired;
+
+        /// <summary>The host that is running right now (null if none). Lets the bootstrap avoid a duplicate.</summary>
+        public static CameraDebugHost Instance { get; set; }
+
+        private void Awake()
+        {
+            // The readout first: it must show even if nothing else can be wired.
+            GetOrAdd<CameraJitterReadout>();
+            toggle = GetOrAdd<CameraFollowModeToggle>();
+            check = GetOrAdd<CameraRigSelfCheck>();
+        }
+
+        private void OnEnable()
+        {
+            if (Instance == null) Instance = this;
+        }
+
+        private void OnDisable()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        // Use the component if the scene builder already added it, otherwise add one.
+        private T GetOrAdd<T>() where T : Component
+        {
+            var existing = GetComponent<T>();
+            if (existing != null) return existing;
+            return gameObject.AddComponent<T>();
+        }
+
+        private void Update()
+        {
+            if (toggle.brain != null && toggle.simpleFollow != null) return; // all wired
 
             var cam = Camera.main;
-            if (cam == null) return;
+            if (cam == null) { CameraJitterReadout.WiringStatus = "camera not found (no enabled camera tagged MainCamera)"; loggedWired = false; return; }
             var brain = cam.GetComponent<CinemachineBrain>();
-            if (brain == null) return;
+            if (brain == null) { CameraJitterReadout.WiringStatus = "main camera has no CinemachineBrain"; loggedWired = false; return; }
 
             CinemachineCamera vcam = null;
             for (int i = 0; i < CinemachineCore.VirtualCameraCount; i++)
@@ -46,24 +113,24 @@ namespace KnightSurvivors.Cameras
             }
 
             var simple = cam.GetComponent<SimpleIsoFollow>();
-            if (simple == null) simple = cam.gameObject.AddComponent<SimpleIsoFollow>();
-            simple.enabled = false; // Cinemachine is the default; F2 switches
+            if (simple == null)
+            {
+                simple = cam.gameObject.AddComponent<SimpleIsoFollow>();
+                simple.enabled = false; // Cinemachine is the default; F2 switches
+            }
 
-            installed = new GameObject("TEMP_CameraDebug");
-
-            var toggle = installed.AddComponent<CameraFollowModeToggle>();
             toggle.brain = brain;
             toggle.virtualCamera = vcam;
             toggle.simpleFollow = simple;
-
-            var check = installed.AddComponent<CameraRigSelfCheck>();
+            toggle.SetMode(CameraFollowModeToggle.Mode.Cinemachine, log: false); // a reload always starts on Cinemachine
             check.brain = brain;
             check.virtualCamera = vcam;
 
-            installed.AddComponent<CameraJitterReadout>();
-
-            Debug.Log("[TEMP CameraDebugBootstrap] Camera diagnostics added: F2 = switch Cinemachine / SimpleFollow, " +
-                      "F3 = hide/show the jitter readout. (Remove in the PR #1 cleanup.)");
+            if (!loggedWired)
+            {
+                loggedWired = true;
+                Debug.Log($"[TEMP DEBUG] Camera diagnostics wired to '{cam.name}' (vcam: {(vcam != null ? vcam.name : "none")}).");
+            }
         }
     }
 }

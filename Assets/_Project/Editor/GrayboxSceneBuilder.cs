@@ -82,7 +82,8 @@ namespace KnightSurvivors.EditorTools
                 BuildArena(m);
                 BuildLighting();
                 var systems = BuildSystems(data, m, gems, bloodHit, bloodCrit, bloodKill, bloodBig, dust, decal);
-                BuildCamera();
+                BuildCamera(out var brain, out var vcam);
+                AddCameraDiagnostics(systems, brain, vcam);
                 BuildUI();
 
                 PlaceholderFactory.EnsureFolder("Assets/_Project/Scenes");
@@ -271,7 +272,7 @@ namespace KnightSurvivors.EditorTools
 
         // ------------------------------------------------------------------ camera (GDD 2.2)
 
-        private static void BuildCamera()
+        private static void BuildCamera(out CinemachineBrain brainOut, out CinemachineCamera vcamOut)
         {
             // The real Unity camera. The CinemachineBrain moves it to wherever the active Cinemachine camera says.
             var main = new GameObject("Main Camera");
@@ -322,6 +323,14 @@ namespace KnightSurvivors.EditorTools
             // moves the target in BOTH y and z. With y = 0 and z = 0.25 those two parts followed differently
             // (one instantly, one lagging), so the same walk felt different in each direction. Same value on
             // all three axes = the camera trails the knight the same way whichever way it walks.
+            //
+            // ROOT CAUSE of the "only W/S jitters" report (measured from Dustin's recording, see PR #1): on
+            // W/S the floor moved in a repeating 7 / 2.5 / 3 px pattern (a ~10 Hz beat = 50 Hz ticks seen by
+            // a 60 Hz screen) while A/D was smooth (5.5 +/- 0.4 px). That is exactly what damping (0.25, 0,
+            // 0.25) does when the followed point still steps at 50 Hz: y = 0 passes every step straight to
+            // the screen-vertical axis, x = 0.25 filters them out horizontally. So: same damping on every
+            // axis here, a smoothed CameraTarget (TickInterpolator), and CameraRigSelfCheck repairs and
+            // reports an old scene that still has y = 0.
             composer.Damping = new Vector3(0.25f, 0.25f, 0.25f);
             // GDD says "1.2 m lookahead". Cinemachine's lookahead is in SECONDS (max 1), so 0.24 s at 5 m/s = 1.2 m.
             var look = composer.Lookahead;
@@ -338,6 +347,30 @@ namespace KnightSurvivors.EditorTools
             group.composer = composer;
             group.baseDistance = 26f;
             group.maxZoomOut = 1.3f;
+
+            brainOut = brain;
+            vcamOut = vcam;
+        }
+
+        // TEMPORARY (camera jitter diagnostics, remove in the PR #1 cleanup).
+        // Puts the debug tools straight into the scene, on "Systems", so they don't depend on the
+        // CameraDebugBootstrap running (in Dustin's run it didn't). The bootstrap stays as a backup for
+        // scenes built before this change; it sees these components and does nothing.
+        private static void AddCameraDiagnostics(GameObject systems, CinemachineBrain brain, CinemachineCamera vcam)
+        {
+            // The plain-code follow camera for F2, off by default (Cinemachine is the normal camera).
+            var simple = brain.gameObject.AddComponent<SimpleIsoFollow>();
+            simple.enabled = false;
+
+            systems.AddComponent<CameraJitterReadout>(); // the on-screen numbers (visible by default, F3 hides)
+            var toggle = systems.AddComponent<CameraFollowModeToggle>(); // F2
+            toggle.brain = brain;
+            toggle.virtualCamera = vcam;
+            toggle.simpleFollow = simple;
+            var check = systems.AddComponent<CameraRigSelfCheck>(); // wiring check + repair
+            check.brain = brain;
+            check.virtualCamera = vcam;
+            systems.AddComponent<CameraDebugHost>(); // re-wires after reloads, stops the bootstrap duplicating
         }
 
         // ------------------------------------------------------------------ UI

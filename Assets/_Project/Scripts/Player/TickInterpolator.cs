@@ -42,6 +42,9 @@ namespace KnightSurvivors.Player
         // The rotation we wrote last frame. If a child's rotation is different next frame, other code
         // changed it on purpose (e.g. the graybox death pose tips the knight over), so we adopt it.
         private Quaternion[] lastWrittenRotations;
+        // true = "position only": the child follows the smoothed POSITION but never turns (world rotation
+        // stays identity). Used for the CameraTarget, see SetPositionOnly.
+        private bool[] positionOnly;
         private bool initialized;
 
         /// <summary>The alpha used for the last smoothing pass (shown by the TEMPORARY jitter readout).</summary>
@@ -63,6 +66,7 @@ namespace KnightSurvivors.Player
             baseLocalPositions = new Vector3[n];
             baseLocalRotations = new Quaternion[n];
             lastWrittenRotations = new Quaternion[n];
+            positionOnly = new bool[n];
             for (int i = 0; i < n; i++)
             {
                 var child = smoothedChildren[i];
@@ -100,10 +104,37 @@ namespace KnightSurvivors.Player
             System.Array.Resize(ref baseLocalPositions, n + 1);
             System.Array.Resize(ref baseLocalRotations, n + 1);
             System.Array.Resize(ref lastWrittenRotations, n + 1);
+            System.Array.Resize(ref positionOnly, n + 1);
             smoothedChildren[n] = child;
             baseLocalPositions[n] = child.localPosition;
             baseLocalRotations[n] = child.localRotation;
             lastWrittenRotations[n] = child.localRotation;
+        }
+
+        /// <summary>
+        /// Make a smoothed child follow the smoothed POSITION only, with its world rotation kept at
+        /// identity (it never turns when the knight turns). Used for the CameraTarget.
+        ///
+        /// WHY: the camera only needs a point to follow. If that point also turned with the knight, then
+        /// anything that reads the target's rotation (a follow offset in target space, a group that
+        /// averages member rotations, a slash parented to it) would swing when the knight turns 180°
+        /// between W and S. A target that never rotates removes that whole class of problems.
+        /// </summary>
+        public void SetPositionOnly(Transform child)
+        {
+            EnsureInitialized();
+            if (child == null) return;
+            for (int i = 0; i < smoothedChildren.Length; i++)
+            {
+                if (smoothedChildren[i] != child) continue;
+                if (!positionOnly[i])
+                {
+                    positionOnly[i] = true;
+                    // Store its resting offset in WORLD axes (it won't be rotated by the knight's facing).
+                    baseLocalPositions[i] = transform.rotation * baseLocalPositions[i];
+                }
+                return;
+            }
         }
 
         /// <summary>Forget history (call after teleporting), so nothing slides across the map.</summary>
@@ -139,6 +170,16 @@ namespace KnightSurvivors.Player
             {
                 var child = smoothedChildren[i];
                 if (child == null) continue;
+
+                if (positionOnly[i])
+                {
+                    // Position-only child (the CameraTarget): smoothed position + a fixed world offset,
+                    // world rotation = identity. localRotation = inverse(root) makes world = identity.
+                    child.localPosition = inverseRoot * (smoothedPosition + baseLocalPositions[i] - transform.position);
+                    child.localRotation = inverseRoot;
+                    lastWrittenRotations[i] = child.localRotation;
+                    continue;
+                }
 
                 if (child.localRotation != lastWrittenRotations[i]) baseLocalRotations[i] = child.localRotation;
 

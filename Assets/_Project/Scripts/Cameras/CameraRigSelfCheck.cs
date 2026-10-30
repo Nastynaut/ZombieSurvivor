@@ -18,6 +18,10 @@ namespace KnightSurvivors.Cameras
     ///   3. The group's members are the players' smoothed CameraTarget children, never a player ROOT
     ///      (the root only moves at 50 Hz).
     ///   4. Every player's CameraTarget is a smoothed child of its TickInterpolator.
+    ///   5. The PositionComposer damps all three camera axes the SAME amount. Dustin's recording of the
+    ///      W/S-only jitter matched a scene where damping was (0.25, 0, 0.25): y = 0 lets every 50 Hz step
+    ///      of the followed point straight through on the screen-vertical axis, while x = 0.25 hides them
+    ///      on the screen-horizontal axis. So an old scene with y = 0 is repaired here and reported.
     /// </summary>
     public class CameraRigSelfCheck : MonoBehaviour
     {
@@ -100,6 +104,8 @@ namespace KnightSurvivors.Cameras
                 }
             }
 
+            CheckComposer(ref problems);
+
             int players = 0;
             var list = PlayerRegistry.Players;
             for (int i = 0; i < list.Count; i++)
@@ -129,6 +135,34 @@ namespace KnightSurvivors.Cameras
             }
 
             CameraJitterReadout.WiringStatus = status.ToString();
+        }
+
+        // Point 5 above, plus the "Rig:" line of the readout (what the composer REALLY uses at runtime).
+        private void CheckComposer(ref int problems)
+        {
+            var composer = virtualCamera != null ? virtualCamera.GetComponent<CinemachinePositionComposer>() : null;
+            if (composer == null)
+            {
+                CameraJitterReadout.RigStatus = "no PositionComposer on the vcam";
+                return;
+            }
+
+            Vector3 damping = composer.Damping;
+            float wanted = Mathf.Max(damping.x, damping.y, damping.z);
+            if (!Mathf.Approximately(damping.x, damping.y) || !Mathf.Approximately(damping.y, damping.z))
+            {
+                Warn($"PositionComposer damping was {damping} (different per axis = W/S and A/D follow differently, " +
+                     $"y = 0 shows 50 Hz steps on W/S). Set to {wanted} on all axes. Rebuild the scene to make it permanent.");
+                composer.Damping = new Vector3(wanted, wanted, wanted);
+                damping = composer.Damping;
+                problems++;
+            }
+
+            var look = composer.Lookahead;
+            CameraJitterReadout.RigStatus =
+                $"damping {damping.x:0.00}/{damping.y:0.00}/{damping.z:0.00}  lookahead " +
+                (look.Enabled ? $"ON {look.Time:0.00}s smooth {look.Smoothing:0.0}{(look.IgnoreY ? " ignoreY" : "")}" : "OFF") +
+                $"  distance {composer.CameraDistance:0.0}";
         }
 
         private void Warn(string message)

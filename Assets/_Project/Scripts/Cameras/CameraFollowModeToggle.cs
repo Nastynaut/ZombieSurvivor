@@ -10,10 +10,11 @@ namespace KnightSurvivors.Cameras
     /// Press F2 to switch the main camera between:
     ///   Cinemachine  - the real rig (CinemachineBrain + CM_IsoCamera + PlayerTargetGroup)
     ///   SimpleFollow - SimpleIsoFollow, a few lines of plain code (no Cinemachine at all)
-    /// The active mode is printed to the Console and shown in the F3 readout.
+    /// Every press prints "[TEMP DEBUG] F2 follow: ..." to the Console; the readout shows the mode too.
     ///
-    /// Switching OFF Cinemachine means disabling the CinemachineBrain (so it stops moving the camera)
-    /// AND the virtual camera (so nothing else drives it). Switching back re-enables both.
+    /// The key is read through its OWN InputAction bound to &lt;Keyboard&gt;/f2 (enabled in OnEnable), not
+    /// through the player's PlayerInput, so it works no matter which control scheme the player uses.
+    /// (Click inside the Game view first: Unity only sends keys to the game when the Game view has focus.)
     /// </summary>
     public class CameraFollowModeToggle : MonoBehaviour
     {
@@ -31,16 +32,27 @@ namespace KnightSurvivors.Cameras
         [Tooltip("The plain-code follow camera on the main camera.")]
         public SimpleIsoFollow simpleFollow;
 
-        private void Start()
+        private InputAction toggleAction;
+
+        private void OnEnable()
         {
-            // Start in Cinemachine mode (the real game), whatever was saved in the scene.
-            SetMode(Mode.Cinemachine, log: false);
+            if (toggleAction == null) toggleAction = new InputAction("TEMP_ToggleFollow", InputActionType.Button, "<Keyboard>/f2");
+            toggleAction.Enable();
+        }
+
+        private void OnDisable()
+        {
+            if (toggleAction != null) toggleAction.Disable();
+        }
+
+        private void OnDestroy()
+        {
+            if (toggleAction != null) toggleAction.Dispose();
         }
 
         private void Update()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard == null || !keyboard.f2Key.wasPressedThisFrame) return;
+            if (toggleAction == null || !toggleAction.WasPressedThisFrame()) return;
             SetMode(Current == Mode.Cinemachine ? Mode.SimpleFollow : Mode.Cinemachine, log: true);
         }
 
@@ -55,7 +67,12 @@ namespace KnightSurvivors.Cameras
             if (!useCinemachine) simpleFollow.Snap(); // start exactly on the player, no swoop
 
             Current = mode;
-            if (log) Debug.Log($"[TEMP CameraFollowModeToggle] F2: camera follow mode is now {mode}.");
+            if (log)
+            {
+                string name = mode == Mode.Cinemachine ? "Cinemachine" : "SimpleFollow";
+                string note = simpleFollow == null ? " (SimpleFollow not available yet: camera not wired)" : "";
+                Debug.Log($"[TEMP DEBUG] F2 follow: {name}{note}");
+            }
         }
     }
 }

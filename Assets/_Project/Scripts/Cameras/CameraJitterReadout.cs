@@ -2,43 +2,55 @@ using System.Text;
 using KnightSurvivors.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace KnightSurvivors.Cameras
 {
     /// <summary>
     /// TEMPORARY (camera jitter diagnostics, remove in the PR #1 cleanup).
     ///
-    /// A small text box in the top-left corner (F3 hides/shows it) with numbers that tell us WHERE the
-    /// jitter comes from. Every value is measured once per rendered frame, after the camera has moved.
+    /// A text panel in the top-left corner of the Game view, VISIBLE BY DEFAULT (F3 hides/shows it), with
+    /// numbers that tell us WHERE the jitter comes from. Every value is measured once per rendered frame,
+    /// after the camera has moved.
     ///
-    /// HOW TO READ IT (walking in a straight line at full speed):
-    ///   - "speed" = distance moved this frame / frame time, in m/s. For something moving smoothly it is
-    ///     nearly the same every frame (the knight's move speed). The min..max range over the last 0.5 s
-    ///     is the important part: a narrow range = smooth, a range like "0 .. 15" = it moves in steps.
-    ///   - Root: SHOULD step (0 on most frames, a jump on tick frames). That's normal: it is the 50 Hz
-    ///     gameplay object. If it does NOT step, the game runs at or below 50 fps.
-    ///   - CameraTarget: should be smooth. If it steps like the root, the smoothing is broken.
-    ///   - Camera: should be smooth. If CameraTarget is smooth but the camera isn't, the camera rig is
-    ///     the problem (compare F2 modes).
-    ///   - "knight on screen": how much the knight moved relative to the camera this frame. Close to 0
-    ///     while walking = the knight stays still on screen (good). Big jumpy values = visible jitter.
-    ///   - "ticks/frame": how many 50 Hz FixedUpdates ran before each frame. A steady pattern (1,1,1 at
-    ///     50 fps; 0,1,0,1 at 100 fps; 0,0,1 at 144 fps) is normal. Lots of 2s and 3s = frame hitches.
-    ///   - alpha: TickInterpolator's 0..1 blend value. It should sweep 0 -> 1 between ticks.
+    /// WHY A uGUI CANVAS (and not OnGUI like the a3146a4 version): OnGUI depends on the IMGUI skin and is
+    /// easy to miss; a Screen Space Overlay canvas with the highest sorting order (32767) is drawn on top
+    /// of everything else (HUD, level-up screen) and uses Unity's built-in font, so it can't be hidden by a
+    /// missing font or a UI canvas in front of it.
+    ///
+    /// The first line is a BUILD STAMP. If you don't see the stamp below on screen, Unity is not running
+    /// the newest scripts (see README "Unity didn't pick up the new scripts").
+    ///
+    /// HOW TO READ IT (walk in a straight line at full speed, first A/D, then W/S):
+    ///   - Axes are the CAMERA's: x = screen left/right, y = screen up/down, z = into the screen.
+    ///     Walking A/D moves things on x only. Walking W/S moves them on y AND z (the camera looks 50° down).
+    ///   - Each line shows "min .. max" of the speed (m/s) on that axis over the last 0.5 s. Smooth motion
+    ///     = min and max close together. Stepping motion = a wide range (e.g. "0.0 .. 9.5").
+    ///   - Root (50 Hz): SHOULD step. It's the gameplay object, it only moves on ticks.
+    ///   - CameraTarget: should be smooth on every axis. If it steps like the root, smoothing is broken.
+    ///   - Camera: should be smooth. If CameraTarget is smooth but the camera isn't, the rig is the problem.
+    ///   - Knight on screen px: how many pixels the knight moved on screen this frame, x and y separately.
+    ///     Near 0 = the knight stays still on screen (good).
+    ///   - Rig: the composer's damping / lookahead / distance as they really are at runtime.
+    ///   - ticks/frame: how many 50 Hz FixedUpdates ran before each frame (1,1,1 at 50 fps; 0,1,0,1 at
+    ///     100 fps; 1,1,1,1,0 at 60 fps). alpha: TickInterpolator's 0..1 blend value.
     /// </summary>
     [DefaultExecutionOrder(10000)] // LateUpdate after everything that moves the camera
     public class CameraJitterReadout : MonoBehaviour
     {
+        /// <summary>Shown on screen and in the Console, so we can tell which version of the scripts Unity runs.</summary>
+        public const string BuildStamp = "diag-2026-10-30 (W/S fix)";
+
         private const int History = 240;     // frames kept (enough for 0.5 s at 480 fps)
         private const float Window = 0.5f;   // seconds shown as min..max
 
         public bool visible = true;
 
+        // Per-frame history. One "track" per number we show as min..max.
         private readonly float[] frameTimes = new float[History];
-        private readonly float[] cameraSpeeds = new float[History];
-        private readonly float[] targetSpeeds = new float[History];
-        private readonly float[] rootSpeeds = new float[History];
-        private readonly float[] screenDeltas = new float[History];
+        private readonly float[][] tracks = new float[TrackCount][];
+        private const int CamX = 0, CamY = 1, CamZ = 2, TgtX = 3, TgtY = 4, TgtZ = 5, RootSpeed = 6, RootY = 7,
+            ScreenX = 8, ScreenY = 9, TrackCount = 10;
         private readonly int[] ticks = new int[History];
         private int head;
         private int filled;
@@ -46,15 +58,89 @@ namespace KnightSurvivors.Cameras
         private float smoothedMs;
         private int ticksThisFrame;
         private bool hasLast;
-        private Vector3 lastCamera, lastTarget, lastRoot, lastOffset;
+        private Vector3 lastCamera, lastTarget, lastRoot, lastScreen;
         private float lastAlpha;
-        private string wiring = "";
+        private int frameCounter;
 
-        private readonly StringBuilder text = new StringBuilder(1024);
-        private GUIStyle style;
+        private readonly StringBuilder text = new StringBuilder(2048);
+        private InputAction toggleAction;
+        private GameObject canvasObject;
+        private Text label;
 
-        /// <summary>Set by CameraRigSelfCheck: a one-line summary of the camera wiring.</summary>
+        /// <summary>Set by CameraRigSelfCheck / CameraDebugHost: a one-line summary of the camera wiring.</summary>
         public static string WiringStatus { get; set; } = "not checked yet";
+
+        /// <summary>Set by CameraRigSelfCheck: the composer's damping, lookahead and distance at runtime.</summary>
+        public static string RigStatus { get; set; } = "not checked yet";
+
+        private void Awake()
+        {
+            for (int i = 0; i < TrackCount; i++) tracks[i] = new float[History];
+            BuildCanvas();
+            Debug.Log("[TEMP DEBUG] Camera jitter readout created (" + BuildStamp + "), visible by default. F3 hides it.");
+        }
+
+        private void OnEnable()
+        {
+            // Our OWN action bound straight to the F3 key, so it works whatever the player's PlayerInput does.
+            if (toggleAction == null) toggleAction = new InputAction("TEMP_ToggleReadout", InputActionType.Button, "<Keyboard>/f3");
+            toggleAction.Enable();
+            if (canvasObject != null) canvasObject.SetActive(visible);
+        }
+
+        private void OnDisable()
+        {
+            if (toggleAction != null) toggleAction.Disable();
+            if (canvasObject != null) canvasObject.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (toggleAction != null) toggleAction.Dispose();
+            if (canvasObject != null) Destroy(canvasObject);
+        }
+
+        // A full-screen overlay canvas with a dark box and white text in the top-left corner.
+        private void BuildCanvas()
+        {
+            canvasObject = new GameObject("TEMP_JitterReadoutCanvas");
+            canvasObject.transform.SetParent(transform, false); // dies with us, survives what we survive
+            var canvas = canvasObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32767; // the highest possible: drawn over the HUD and every menu
+
+            // Dark background panel, anchored to the top-left corner.
+            var panel = new GameObject("Panel", typeof(RectTransform));
+            panel.transform.SetParent(canvasObject.transform, false);
+            var panelRect = (RectTransform)panel.transform;
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0f, 1f);
+            panelRect.anchoredPosition = new Vector2(8f, -8f);
+            panelRect.sizeDelta = new Vector2(620f, 330f);
+            var background = panel.AddComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0.78f);
+            background.raycastTarget = false; // never blocks clicks on the game UI
+
+            // The text, inset a little inside the panel.
+            var textObject = new GameObject("Text", typeof(RectTransform));
+            textObject.transform.SetParent(panel.transform, false);
+            var textRect = (RectTransform)textObject.transform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(8f, 6f);
+            textRect.offsetMax = new Vector2(-8f, -6f);
+            label = textObject.AddComponent<Text>();
+            // LegacyRuntime.ttf ships inside Unity itself (no asset needed), so the text can't go missing.
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 14;
+            label.color = Color.white;
+            label.alignment = TextAnchor.UpperLeft;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+            label.raycastTarget = false;
+            label.text = "TEMP camera readout " + BuildStamp + " (waiting for the player...)";
+
+            canvasObject.SetActive(visible);
+        }
 
         private void FixedUpdate()
         {
@@ -63,12 +149,25 @@ namespace KnightSurvivors.Cameras
 
         private void LateUpdate()
         {
-            var keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.f3Key.wasPressedThisFrame) visible = !visible;
+            if (toggleAction != null && toggleAction.WasPressedThisFrame())
+            {
+                visible = !visible;
+                if (canvasObject != null) canvasObject.SetActive(visible);
+                Debug.Log("[TEMP DEBUG] F3 readout: " + (visible ? "ON" : "OFF"));
+            }
 
             float dt = Time.unscaledDeltaTime;
             smoothedMs = smoothedMs <= 0f ? dt * 1000f : Mathf.Lerp(smoothedMs, dt * 1000f, 0.05f);
 
+            Measure(dt);
+
+            // Rebuilding the text every frame would allocate garbage every frame; 6 times a second is plenty.
+            frameCounter++;
+            if (visible && label != null && (frameCounter % 10 == 0 || !hasLast)) label.text = BuildText();
+        }
+
+        private void Measure(float dt)
+        {
             var cam = Camera.main;
             PlayerController player = FirstPlayer();
             if (cam == null || player == null || dt <= 0f)
@@ -79,10 +178,11 @@ namespace KnightSurvivors.Cameras
             }
 
             Transform target = player.cameraTarget != null ? player.cameraTarget : player.transform;
-            Vector3 camPos = cam.transform.position;
+            Transform camTransform = cam.transform;
+            Vector3 camPos = camTransform.position;
             Vector3 targetPos = target.position;
             Vector3 rootPos = player.transform.position;
-            Vector3 offset = targetPos - camPos;
+            Vector3 screen = cam.WorldToScreenPoint(targetPos);
 
             var interp = player.GetComponent<TickInterpolator>();
             lastAlpha = interp != null ? interp.LastAlpha : -1f;
@@ -92,20 +192,29 @@ namespace KnightSurvivors.Cameras
                 head = (head + 1) % History;
                 if (filled < History) filled++;
                 frameTimes[head] = dt;
-                cameraSpeeds[head] = (camPos - lastCamera).magnitude / dt;
-                targetSpeeds[head] = (targetPos - lastTarget).magnitude / dt;
-                rootSpeeds[head] = (rootPos - lastRoot).magnitude / dt;
-                screenDeltas[head] = (offset - lastOffset).magnitude * 1000f; // millimetres per frame
+
+                // Movement this frame expressed in the CAMERA's axes (right, up, forward), in m/s.
+                Vector3 camStep = camTransform.InverseTransformDirection(camPos - lastCamera) / dt;
+                Vector3 tgtStep = camTransform.InverseTransformDirection(targetPos - lastTarget) / dt;
+                tracks[CamX][head] = camStep.x;
+                tracks[CamY][head] = camStep.y;
+                tracks[CamZ][head] = camStep.z;
+                tracks[TgtX][head] = tgtStep.x;
+                tracks[TgtY][head] = tgtStep.y;
+                tracks[TgtZ][head] = tgtStep.z;
+                tracks[RootSpeed][head] = (rootPos - lastRoot).magnitude / dt;
+                tracks[RootY][head] = rootPos.y;
+                tracks[ScreenX][head] = screen.x - lastScreen.x; // pixels this frame
+                tracks[ScreenY][head] = screen.y - lastScreen.y;
                 ticks[head] = ticksThisFrame;
             }
 
             lastCamera = camPos;
             lastTarget = targetPos;
             lastRoot = rootPos;
-            lastOffset = offset;
+            lastScreen = screen;
             hasLast = true;
             ticksThisFrame = 0;
-            wiring = WiringStatus;
         }
 
         private static PlayerController FirstPlayer()
@@ -118,12 +227,12 @@ namespace KnightSurvivors.Cameras
             return null;
         }
 
-        // Min, max and last value over the last Window seconds.
-        private void Range(float[] values, out float min, out float max, out float last)
+        // Min and max of one track over the last Window seconds.
+        private void Range(int track, out float min, out float max)
         {
+            float[] values = tracks[track];
             min = float.MaxValue;
-            max = 0f;
-            last = filled > 0 ? values[head] : 0f;
+            max = float.MinValue;
             float time = 0f;
             for (int i = 0; i < filled && time < Window; i++)
             {
@@ -133,52 +242,54 @@ namespace KnightSurvivors.Cameras
                 if (v > max) max = v;
                 time += frameTimes[index];
             }
-            if (min == float.MaxValue) min = 0f;
+            if (min == float.MaxValue) { min = 0f; max = 0f; }
         }
 
-        private void AppendSpeed(string label, float[] values)
+        private void AppendRange(int track, string format)
         {
-            Range(values, out float min, out float max, out float last);
-            text.Append(label).Append(": ").Append(last.ToString("0.00"))
-                .Append(" m/s   (0.5 s: ").Append(min.ToString("0.00")).Append(" .. ").Append(max.ToString("0.00"))
-                .Append(")\n");
+            Range(track, out float min, out float max);
+            text.Append(min.ToString(format)).Append("..").Append(max.ToString(format));
         }
 
-        private void OnGUI()
+        private void AppendAxes(string label, int x, int y, int z)
         {
-            if (!visible) return;
-            if (style == null)
-            {
-                style = new GUIStyle(GUI.skin.box)
-                {
-                    alignment = TextAnchor.UpperLeft,
-                    fontSize = 14,
-                    richText = false,
-                    padding = new RectOffset(8, 8, 6, 6),
-                };
-                style.normal.textColor = Color.white;
-            }
-
-            text.Clear();
-            text.Append("TEMP camera jitter readout (F3 hide, F2 switch follow mode)\n");
-            float fps = smoothedMs > 0f ? 1000f / smoothedMs : 0f;
-            text.Append("FPS ").Append(fps.ToString("0")).Append("   frame ").Append(smoothedMs.ToString("0.00"))
-                .Append(" ms   tick ").Append((Time.fixedDeltaTime * 1000f).ToString("0.0")).Append(" ms\n");
-            text.Append("Follow mode: ").Append(CameraFollowModeToggle.Current.ToString()).Append('\n');
-            AppendSpeed("Camera      ", cameraSpeeds);
-            AppendSpeed("CameraTarget", targetSpeeds);
-            AppendSpeed("Root (50 Hz)", rootSpeeds);
-            Range(screenDeltas, out float sMin, out float sMax, out float sLast);
-            text.Append("Knight on screen: ").Append(sLast.ToString("0.0")).Append(" mm/frame   (0.5 s max ")
-                .Append(sMax.ToString("0.0")).Append(")\n");
-            text.Append("Tick alpha: ").Append(lastAlpha.ToString("0.00")).Append("   ticks/frame: ");
-            for (int i = Mathf.Min(filled, 16) - 1; i >= 0; i--) text.Append(ticks[(head - i + History) % History]);
+            text.Append(label).Append("  x ");
+            AppendRange(x, "0.0");
+            text.Append("   y ");
+            AppendRange(y, "0.0");
+            text.Append("   z ");
+            AppendRange(z, "0.0");
             text.Append('\n');
-            text.Append("Wiring: ").Append(wiring);
+        }
 
-            var content = new GUIContent(text.ToString());
-            Vector2 size = style.CalcSize(content);
-            GUI.Box(new Rect(10f, 10f, size.x, size.y), content, style);
+        private string BuildText()
+        {
+            text.Clear();
+            text.Append("TEMP camera readout  ").Append(BuildStamp).Append("   (F3 hide, F2 follow mode)\n");
+            float fps = smoothedMs > 0f ? 1000f / smoothedMs : 0f;
+            text.Append("FPS ").Append(fps.ToString("0")).Append("  frame ").Append(smoothedMs.ToString("0.0"))
+                .Append(" ms  tick ").Append((Time.fixedDeltaTime * 1000f).ToString("0.0")).Append(" ms  alpha ")
+                .Append(lastAlpha.ToString("0.00")).Append('\n');
+            text.Append("ticks/frame: ");
+            for (int i = Mathf.Min(filled, 24) - 1; i >= 0; i--) text.Append(ticks[(head - i + History) % History]);
+            text.Append('\n');
+            text.Append("Follow mode: ").Append(CameraFollowModeToggle.Current.ToString()).Append('\n');
+            text.Append("Speeds in camera axes, m/s, min..max over 0.5 s (x=screen L/R, y=screen up, z=depth)\n");
+            AppendAxes("Camera      ", CamX, CamY, CamZ);
+            AppendAxes("CameraTarget", TgtX, TgtY, TgtZ);
+            text.Append("Root (50 Hz) speed ");
+            AppendRange(RootSpeed, "0.0");
+            text.Append(" m/s   root world Y ");
+            AppendRange(RootY, "0.000");
+            text.Append('\n');
+            text.Append("Knight on screen px/frame  x ");
+            AppendRange(ScreenX, "0.0");
+            text.Append("   y ");
+            AppendRange(ScreenY, "0.0");
+            text.Append('\n');
+            text.Append("Rig: ").Append(RigStatus).Append('\n');
+            text.Append("Wiring: ").Append(WiringStatus);
+            return text.ToString();
         }
     }
 }
