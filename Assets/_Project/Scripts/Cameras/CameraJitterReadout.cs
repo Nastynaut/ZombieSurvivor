@@ -76,7 +76,9 @@ namespace KnightSurvivors.Cameras
             for (int i = 0; i < TrackCount; i++) tracks[i] = new float[History];
             BuildCanvas();
             // A WARNING (yellow) on purpose: it still shows if the Console's grey "info" filter is switched off.
-            Debug.LogWarning("[TEMP DEBUG] Camera jitter readout created (" + BuildStamp + "), visible by default. F3 hides it.");
+            Debug.LogWarning("[TEMP DEBUG] Camera jitter readout created (" + BuildStamp + ") on '" + name +
+                             "', canvas active: " + (canvasObject != null && canvasObject.activeInHierarchy) +
+                             ", label: " + (label != null) + ". Visible by default, F3 hides it.");
         }
 
         private void OnEnable()

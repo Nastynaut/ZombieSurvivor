@@ -60,6 +60,17 @@ namespace KnightSurvivors.Cameras
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
+            // Unconditional count of the diagnostics the scene really contains at Play start (expected
+            // 1 of each on a freshly built Graybox scene; SimpleIsoFollow sits on the Main Camera).
+            Debug.LogWarning("[TEMP DEBUG] Play-start diagnostics in scene '" +
+                             UnityEngine.SceneManagement.SceneManager.GetActiveScene().name + "': " +
+                             "CameraJitterReadout " + CountInScenes<CameraJitterReadout>() +
+                             ", CameraFollowModeToggle " + CountInScenes<CameraFollowModeToggle>() +
+                             ", CameraRigSelfCheck " + CountInScenes<CameraRigSelfCheck>() +
+                             ", CameraDebugHost " + CountInScenes<CameraDebugHost>() +
+                             ", CameraShakeDebugToggle " + CountInScenes<CameraShakeDebugToggle>() +
+                             ", SimpleIsoFollow " + CountInScenes<SimpleIsoFollow>() + ".");
+
             if (installed != null) return; // Unity's == null is also true for a destroyed object
 
             // AfterSceneLoad runs after the scene objects' Awake/OnEnable, so if the scene builder already
@@ -74,6 +85,18 @@ namespace KnightSurvivors.Cameras
             installed = new GameObject("TEMP_CameraDebug");
             Object.DontDestroyOnLoad(installed);
             installed.AddComponent<CameraDebugHost>();
+        }
+
+        // How many T components exist in the loaded scenes, including ones on inactive objects.
+        // (FindObjectsOfTypeAll also returns prefab assets, so we keep only objects that live in a scene.)
+        private static int CountInScenes<T>() where T : Component
+        {
+            int count = 0;
+            foreach (var c in Resources.FindObjectsOfTypeAll<T>())
+            {
+                if (c.gameObject.scene.IsValid()) count++;
+            }
+            return count;
         }
     }
 
