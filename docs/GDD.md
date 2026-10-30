@@ -1,8 +1,9 @@
-# Knight Survivors (working title): Game Design Document v0.3
+# Knight Survivors (working title): Game Design Document v0.4
 
 ## Changelog
 | Version | Date | Changes |
 |---|---|---|
+| 0.4 | 2026-10-30 | Level-up Skip is keyboard **X** on the UI map. **Esc** stays Pause only. **S** stays move-down only. Gamepad Skip stays **B / East** (West stays Reroll). Chest auto-spin uses the same Skip binding. New `docs/DataTables.md`: ScriptableObject fill sheet for the 15-minute run (weapons, upgrades, enemies, waves), aligned to the C# classes from Coder PR #1. Linked from the header and §9. |
 | 0.3 | 2026-10-28 | Final cleanup. **Status: Frozen until Coder PR #1.** The dried decal color is `#7A0A10` everywhere (none of the old dried hex is left). Spitter colorblind cue is bluish green `#009E73` plus the sac shape. §3.5.1 calls the T3 tier Bloater. Adopted PlaceholderSpec numbers where the GDD was silent: telegraph sizes, scorch life, decals per frame, pool sizes (§3.5.2, §7.8), with overrides noted. Spitter spit range is explicit: 9 m, 8 m/s, 0.5 s telegraph. New `EnemyAttack` fields: `range`, `width`, `arcDegrees`, `angleOffsets`. New `EnemyDefinition` fields: `keepDistanceMin` / `keepDistanceMax`. New `FeedbackSettings` field: `maxNewDecalsPerFrame`. All §13 rows closed. |
 | 0.2.2 | 2026-10-28 | The Supervisor ruled on §13 items 1-7 (DECIDED). Item 8, telegraph look, stays open with the Asset Designer. **Standing rule:** the GDD is canonical for numbers and behavior, and PlaceholderSpec is canonical for look. Changes: all pools can grow, with an enemy prewarm table (§7.8) and a new `prewarmCount` field. Hit flash is a material swap held for `flashMs`. Blood bursts use the GDD formula. Slice decals are 100 projectors with a 20 s life and a 4 s fade, using the spec's drying look, fresh `#B3121B` drying to `#7A0A10`. Blood Off keeps scorch marks (max 50). The perf test uses the minute-14 mix. Corpses sink and fade. The player-hurt flash is HP red `#E23A3A`. Per-enemy `radius` values are added (§3.5, §9.6). New fields are in §9.6 and §9.12. |
 | 0.2.1 | 2026-10-28 | Aligned with `docs/PlaceholderSpec.md` (readability, per Supervisor request): XP gems are cyan / green / gold; Plague Spitter type color is pink `#FF4FB3`; all attack telegraphs are pulsing orange-red `#FF6A3D`, never blood red; play-area braziers are emissive only, with no real lights; the enemy color and silhouette table is adopted in §3.5.1 (naming reconciled). The gameplay numbers that differ from PlaceholderSpec are kept and listed in §13. |
@@ -12,10 +13,10 @@
 
 | Field | Value |
 |---|---|
-| Version | 0.3 (2026-10-28) |
-| Status | **Frozen until Coder PR #1.** Changes after that go through the Supervisor. |
+| Version | 0.4 (2026-10-30) |
+| Status | **v0.4.** Numbers and behavior in this doc stay canonical. `docs/DataTables.md` is the Coder's asset-fill sheet (paths, fields, 15-minute values). It does not override this doc. |
 | Owner | Game Designer (for Dustin Shelton) |
-| Doc relationships | **Decided (Supervisor):** this GDD is **canonical for numbers and behavior**: stats, timings, counts, caps, pool sizes, colliders and rules. `docs/PlaceholderSpec.md` is **canonical for look**: shapes, colors, materials and silhouettes. `docs/ArtDirection.md` sets the final-art direction. When the docs disagree, numbers come from here and look comes from PlaceholderSpec. See §13. |
+| Doc relationships | **Decided (Supervisor):** this GDD is **canonical for numbers and behavior**: stats, timings, counts, caps, pool sizes, colliders and rules. `docs/PlaceholderSpec.md` is **canonical for look**: shapes, colors, materials and silhouettes. `docs/ArtDirection.md` sets the final-art direction. When the docs disagree, numbers come from here and look comes from PlaceholderSpec. See §13. **`docs/DataTables.md`** lists the ScriptableObject assets, the C# field names from PR #1, and the starting values for the 15-minute run. If that sheet and this GDD disagree on a number, this GDD wins. |
 | Engine | **Decided:** Unity 6 LTS, URP |
 | Platform | **Decided:** PC only (Windows, Steam). KB+M and gamepad. Steam Deck is **not** a target. |
 | Business model | **Decided:** one-time purchase at **$4.99**. No DLC, no cosmetics, no microtransactions. All meta progression is earned in game. |
@@ -112,7 +113,9 @@ Movement is camera-relative: W moves up-screen, which is the world direction (�
 | Level-up: pick option 1/2/3 | Mouse click or 1/2/3 | D-pad/stick + A |
 | Level-up: Reroll | R | X / West |
 | Level-up: Banish (then pick a card) | B | Y / North |
-| Level-up: Skip | Esc / S (in UI) | B / East |
+| Level-up: Skip | X (UI map) | B / East |
+
+**Skip (v0.4).** Keyboard **X** is Skip on the **UI** action map (level-up screen and the chest auto-spin). It is not on the Gameplay map. **Esc** stays Pause only (row above). **S** stays move-down only (WASD). **X** is otherwise free: it is not Move, Aim, Dodge (Space or Left Shift), Reroll (**R**), Banish (**B**), or Stats (Tab). Gamepad Skip stays **B / East**. Do not bind Skip to gamepad **X / West**: on a gamepad that button is Reroll. Dodge stays **A / South** or **RB**. Banish stays **Y / North**. This matches the graybox, which already skips on keyboard X because S is move-down.
 
 ---
 
@@ -365,7 +368,7 @@ Red is reserved for blood and blue for Player 1 (azure `#2F80ED`), so neither is
 - **Banish:** removes one item from the pool for the rest of the run. 1 base, +1 per Armory rank (max +3).
 - **Skip:** unlimited. Gives +3 crowns and heals 5% of max HP.
 - **Everything maxed or pool empty:** cards show "Gold Pouch" (+25 crowns) and "Roast Chicken" (heal 30 HP).
-- **Chests:** roll 1 / 3 / 5 upgrades at 75% / 20% / 5%. Luck multiplies the chance of 3 and 5. If you're eligible for an evolution, the first upgrade is always the evolution (the first eligible recipe in list order). The chest UI is an auto-spin of 1.5 s that you can skip.
+- **Chests:** roll 1 / 3 / 5 upgrades at 75% / 20% / 5%. Luck multiplies the chance of 3 and 5. If you're eligible for an evolution, the first upgrade is always the evolution (the first eligible recipe in list order). The chest UI is an auto-spin of 1.5 s that you can skip with the same Skip binding (keyboard **X**, gamepad **B / East**).
 
 ---
 
@@ -581,7 +584,7 @@ This is a separate setting from the Screen Shake and Damage Numbers sliders.
 | Enemies | Shambler, Runner, Grave Knight elite (at 5:00 and 8:00) |
 | Boss | **10:00 mini-boss:** the Rotting King with 8,000 HP, Ground Slam + Raise the Dead only, no phase 2. Expected TTK ~50-60 s at ~150 DPS. |
 | Run | 10 minutes. Uses §5 rows 0-9, with Bloater/Spitter percentages folded into Shambler. Events: 3:30 Stampede only. |
-| Level-up | Pick 1 of 3, 2 rerolls, 1 banish, skip. Slots 3 + 3. |
+| Level-up | Pick 1 of 3, 2 rerolls, 1 banish, skip (keyboard X, gamepad B / East). Slots 3 + 3. |
 | Chest | Elite drop, 1 upgrade, or the evolution if eligible |
 | Juice | Hit flash, local and global hit-stop, knockback, shake, damage numbers, blood bursts, 100 pooled decals, Blood Off/Low/Full toggle |
 | Meta | Crowns earned and saved to disk (JSON). Armory with 3 upgrades: Might, MaxHealth, PickupRadius. |
@@ -612,7 +615,7 @@ Throwing Axes, Fire Flask, Consecrated Ground; Spurs and Lodestone; 3 of the 4 e
 3. The camera is isometric (45° yaw, looking down at about 50°) and follows smoothly. Zombies never pop into existence inside the visible screen.
 4. At minute 0-1, one or two Longsword hits kill a Shambler.
 5. The timer reaches 10:00 and the mini-boss appears. The enemy count visibly ramps up, and Runners show up from about 2:00.
-6. Level-ups pause the game and show 3 cards. Mouse, number keys, and gamepad all work. Reroll (2 per run), Banish (1), and Skip work, and their counters go down.
+6. Level-ups pause the game and show 3 cards. Mouse, number keys, and gamepad all work. Reroll (2 per run), Banish (1), and Skip (keyboard X, gamepad B / East) work, and their counters go down.
 7. Elites appear at 5:00 and 8:00 and charge after a visible pulsing orange-red line (clearly different from blood). Each drops a chest.
 8. With Longsword L8 and Whetstone owned, opening the 8:00 chest turns the Longsword into the Executioner's Greatsword with a 360° swing.
 9. Hits flash white and knock zombies back. Crits show yellow numbers. Elite kills freeze the screen briefly and shake it. Blood bursts on hits, and splatter decals pool on the ground and fade after about 20 s.
@@ -621,11 +624,13 @@ Throwing Axes, Fire Flask, Consecrated Ground; Spurs and Lodestone; 3 of the 4 e
 12. Crowns persist after quitting and relaunching. Buying Might in the Armory raises the damage numbers in the next run.
 13. With 300+ enemies on screen, the game stays smooth (the F1 debug overlay shows FPS ≥ 60 on Dustin's PC and the live enemy count). The full perf gate (the minute-14 mix at the 350 cap, §7.8) runs once Bloaters and Spitters exist. The slice runs this check with its own mix.
 
-**Manual test checklist** (about 15 minutes, once per build): fresh launch → Options: set Blood Off, then back to Full → Play → roll through a crowd → reach L5 by about 1:30 → use a reroll, a banish, and a skip → kill the 5:00 elite and open the chest → aim for Longsword + Whetstone → check the evolution at 8:00 → fight the mini-boss → results → buy an Armory upgrade → quit, relaunch, and check that crowns and the upgrade are kept. Note FPS at 9:00.
+**Manual test checklist** (about 15 minutes, once per build): fresh launch → Options: set Blood Off, then back to Full → Play → roll through a crowd → reach L5 by about 1:30 → use a reroll, a banish, and a skip (keyboard X) → kill the 5:00 elite and open the chest → aim for Longsword + Whetstone → check the evolution at 8:00 → fight the mini-boss → results → buy an Armory upgrade → quit, relaunch, and check that crowns and the upgrade are kept. Note FPS at 9:00.
 
 ---
 
 ## 9. Data schema appendix (ScriptableObjects)
+
+The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, every starting value for the 15-minute run, which fields already exist in code, and which fields to add. Field names below match the C# from PR #1. If a number in that sheet disagrees with this GDD, this GDD wins.
 
 ### 9.1 Enums
 | Enum | Values |
