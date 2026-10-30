@@ -3,7 +3,7 @@
 ## Changelog
 | Version | Date | Changes |
 |---|---|---|
-| 0.4 | 2026-10-30 | Level-up Skip is keyboard **X** on the UI map. **Esc** stays Pause only. **S** stays move-down only. Gamepad Skip stays **B / East** (West stays Reroll). Chest auto-spin uses the same Skip binding. New `docs/DataTables.md`: ScriptableObject fill sheet for the 15-minute run (weapons, upgrades, enemies, waves), aligned to the C# classes from Coder PR #1. Linked from the header and §9. Camera lookahead is **off** by default (`PlayerCameraGroup.lookaheadEnabled`); the camera stays centered on the knight. When that toggle is on, lead is velocity × `lookaheadTime` 0.24 s, which is 1.2 m at the base 5 m/s (ease out 0.4 s, ease back 0.5 s). §8.4 now matches §3.1 and §4.3: Skip stays unlimited and does not spend a counter. Unlimited skips are pending Dustin's confirmation. |
+| 0.4 | 2026-10-30 | Level-up Skip is keyboard **X** on the UI map. **Esc** stays Pause only. **S** stays move-down only. Gamepad Skip stays **B / East** (West stays Reroll). Chest auto-spin uses the same Skip binding. New `docs/DataTables.md`: ScriptableObject fill sheet for the 15-minute run (weapons, upgrades, enemies, waves), aligned to the C# classes from Coder PR #1. Linked from the header and §9. Camera lookahead is **off** by default (`PlayerCameraGroup.lookaheadEnabled`); the camera stays centered on the knight. When that toggle is on, lead is velocity × `lookaheadTime` 0.24 s, which is 1.2 m at the base 5 m/s (ease out 0.4 s, ease back 0.5 s). Dustin ruled Skip is a per-run counter. Base is 3 (`PlayerStats.skips`). Armory `meta_skip` adds +1 per rank for 2 ranks (5 max). Its cost curve matches Banish, the cheaper of the two counter upgrades (Reroll `baseCost` 250, Banish 200): `baseCost` 200, `costGrowth` 0.25, costs 200/500, row total 700. Armory total is **24,285** crowns (~61 runs × ~13 min ≈ 13 hours at ~400 crowns per run). Chests do not refill skips. At 0 the Skip button is disabled. The gold/heal fallback costs no skip. |
 | 0.3 | 2026-10-28 | Final cleanup. **Status: Frozen until Coder PR #1.** The dried decal color is `#7A0A10` everywhere (none of the old dried hex is left). Spitter colorblind cue is bluish green `#009E73` plus the sac shape. §3.5.1 calls the T3 tier Bloater. Adopted PlaceholderSpec numbers where the GDD was silent: telegraph sizes, scorch life, decals per frame, pool sizes (§3.5.2, §7.8), with overrides noted. Spitter spit range is explicit: 9 m, 8 m/s, 0.5 s telegraph. New `EnemyAttack` fields: `range`, `width`, `arcDegrees`, `angleOffsets`. New `EnemyDefinition` fields: `keepDistanceMin` / `keepDistanceMax`. New `FeedbackSettings` field: `maxNewDecalsPerFrame`. All §13 rows closed. |
 | 0.2.2 | 2026-10-28 | The Supervisor ruled on §13 items 1-7 (DECIDED). Item 8, telegraph look, stays open with the Asset Designer. **Standing rule:** the GDD is canonical for numbers and behavior, and PlaceholderSpec is canonical for look. Changes: all pools can grow, with an enemy prewarm table (§7.8) and a new `prewarmCount` field. Hit flash is a material swap held for `flashMs`. Blood bursts use the GDD formula. Slice decals are 100 projectors with a 20 s life and a 4 s fade, using the spec's drying look, fresh `#B3121B` drying to `#7A0A10`. Blood Off keeps scorch marks (max 50). The perf test uses the minute-14 mix. Corpses sink and fade. The player-hurt flash is HP red `#E23A3A`. Per-enemy `radius` values are added (§3.5, §9.6). New fields are in §9.6 and §9.12. |
 | 0.2.1 | 2026-10-28 | Aligned with `docs/PlaceholderSpec.md` (readability, per Supervisor request): XP gems are cyan / green / gold; Plague Spitter type color is pink `#FF4FB3`; all attack telegraphs are pulsing orange-red `#FF6A3D`, never blood red; play-area braziers are emissive only, with no real lights; the enemy color and silhouette table is adopted in §3.5.1 (naming reconciled). The gameplay numbers that differ from PlaceholderSpec are kept and listed in §13. |
@@ -143,7 +143,7 @@ Movement is camera-relative: W moves up-screen, which is the world direction (�
 | `revivals` | 0 | |
 | `rerolls` | 2 | Per run |
 | `banishes` | 1 | Per run |
-| `skips` | unlimited (-1) | |
+| `skips` | 3 | Per run, same kind of counter as rerolls and banishes. Armory `meta_skip` adds +1 per rank, 2 ranks (5 max). |
 | `dodgeDistance` / `dodgeDuration` / `dodgeIFrames` / `dodgeCooldown` | 4.0 / 0.30 / 0.30 / 3.0 | |
 | `weaponSlots` / `passiveSlots` | 4 / 4 | **Decided working default.** The pool is 6+6, so slots are limited to force build choices. Revisit 6/6 when the pool reaches about 12+12. |
 
@@ -366,9 +366,9 @@ Red is reserved for blood and blue for Player 1 (azure `#2F80ED`), so neither is
 - Weights: owned upgrade **1.5**, new item **1.0**. If you own a passive that completes an evolution recipe, the recipe's base weapon card gets **×1.5**. The same item never appears twice in one roll.
 - **Reroll:** redraws all cards. 2 per run base, +1 per Armory rank (max +3). Each chest also grants +1 reroll.
 - **Banish:** removes one item from the pool for the rest of the run. 1 base, +1 per Armory rank (max +3).
-- **Skip:** unlimited. Gives +3 crowns and heals 5% of max HP.
-- **Everything maxed or pool empty:** cards show "Gold Pouch" (+25 crowns) and "Roast Chicken" (heal 30 HP).
-- **Chests:** roll 1 / 3 / 5 upgrades at 75% / 20% / 5%. Luck multiplies the chance of 3 and 5. If you're eligible for an evolution, the first upgrade is always the evolution (the first eligible recipe in list order). The chest UI is an auto-spin of 1.5 s that you can skip with the same Skip binding (keyboard **X**, gamepad **B / East**).
+- **Skip:** 3 per run (`PlayerStats.skips`). Each use spends one. Gives +3 crowns and heals 5% of max HP. Armory `meta_skip` adds +1 per rank, 2 ranks, so the run max is 5. Chests do **not** grant skips. At 0 the Skip button is disabled (greyed) and the player must pick a card.
+- **Everything maxed or pool empty:** cards show "Gold Pouch" (+25 crowns) and "Roast Chicken" (heal 30 HP). Taking a fallback card does **not** spend a skip.
+- **Chests:** roll 1 / 3 / 5 upgrades at 75% / 20% / 5%. Luck multiplies the chance of 3 and 5. If you're eligible for an evolution, the first upgrade is always the evolution (the first eligible recipe in list order). The chest UI is an auto-spin of 1.5 s that you can skip with the same Skip binding (keyboard **X**, gamepad **B / East**). Dismissing that spin does **not** spend `PlayerStats.skips`.
 
 ---
 
@@ -420,6 +420,8 @@ Typical income: a win ≈ 200 (kills) + 150 (time) + 150 (boss) + 60 (elites) + 
 ### 6.2 Permanent upgrades (`MetaUpgrade`, the Armory)
 `cost(rank r) = round5(baseCost × r × (1 + 0.25 × (r − 1)))`
 
+`meta_skip` uses Banish's curve (`baseCost` 200, `costGrowth` 0.25) for 2 ranks (200/500). Reroll's `baseCost` is 250, so Reroll and Banish are not one curve. Skip takes the cheaper of those two.
+
 | id | stat | op | valuePerRank | maxRank | baseCost | Costs per rank | Total |
 |---|---|---|---|---|---|---|---|
 | `meta_might` | Might | PercentAdd | 0.05 | 5 | 100 | 100/250/450/700/1000 | 2500 |
@@ -436,8 +438,9 @@ Typical income: a win ≈ 200 (kills) + 150 (time) + 150 (boss) + 60 (elites) + 
 | `meta_revival` | Revivals | Add | 1 | 1 | 1000 | 1000 | 1000 |
 | `meta_reroll` | Rerolls | Add | 1 | 3 | 250 | 250/625/1125 | 2000 |
 | `meta_banish` | Banishes | Add | 1 | 3 | 200 | 200/500/900 | 1600 |
+| `meta_skip` | Skips | Add | 1 | 2 | 200 | 200/500 | 700 |
 | `meta_amount` | Amount | Add | 1 | 1 | 2500 | 2500 | 2500 |
-| **Total** | | | | | | | **23,585** |
+| **Total** | | | | | | | **24,285** |
 
 Refunds are free and unlimited, so players can experiment.
 
@@ -456,7 +459,7 @@ Refunds are free and unlimited, so players can experiment.
 
 No launch unlock depends on a second character. The unlocks only use the existing `UnlockConditionType` values, so no enum changes are needed. `UnlockDefinition` schema: §9.15.
 
-**Grind target:** full Armory (23,585 crowns, unchanged from v0.1) at about 400 crowns per run is **~55 runs × ~13 min ≈ 12 hours**. All unlocks fall inside that window, so total meta completion is **≈ 12 hours**, all earnable in game.
+**Grind target:** full Armory (**24,285** crowns, was 23,585 before `meta_skip`) at about 400 crowns per run is **~61 runs × ~13 min ≈ 13 hours**. All unlocks fall inside that window, so total meta completion is **≈ 13 hours**, all earnable in game.
 
 ---
 
@@ -584,7 +587,7 @@ This is a separate setting from the Screen Shake and Damage Numbers sliders.
 | Enemies | Shambler, Runner, Grave Knight elite (at 5:00 and 8:00) |
 | Boss | **10:00 mini-boss:** the Rotting King with 8,000 HP, Ground Slam + Raise the Dead only, no phase 2. Expected TTK ~50-60 s at ~150 DPS. |
 | Run | 10 minutes. Uses §5 rows 0-9, with Bloater/Spitter percentages folded into Shambler. Events: 3:30 Stampede only. |
-| Level-up | Pick 1 of 3, 2 rerolls, 1 banish, skip (keyboard X, gamepad B / East). Slots 3 + 3. |
+| Level-up | Pick 1 of 3, 2 rerolls, 1 banish, 3 skips (keyboard X, gamepad B / East). Slots 3 + 3. |
 | Chest | Elite drop, 1 upgrade, or the evolution if eligible |
 | Juice | Hit flash, local and global hit-stop, knockback, shake, damage numbers, blood bursts, 100 pooled decals, Blood Off/Low/Full toggle |
 | Meta | Crowns earned and saved to disk (JSON). Armory with 3 upgrades: Might, MaxHealth, PickupRadius. |
@@ -615,7 +618,7 @@ Throwing Axes, Fire Flask, Consecrated Ground; Spurs and Lodestone; 3 of the 4 e
 3. The camera is isometric (45° yaw, looking down at about 50°) and follows smoothly. Zombies never pop into existence inside the visible screen.
 4. At minute 0-1, one or two Longsword hits kill a Shambler.
 5. The timer reaches 10:00 and the mini-boss appears. The enemy count visibly ramps up, and Runners show up from about 2:00.
-6. Level-ups pause the game and show 3 cards. Mouse, number keys, and gamepad all work. Reroll (2 per run) and Banish (1) work, and their counters go down. Skip (keyboard X, gamepad B / East) is unlimited (§3.1, §4.3) and does not spend a counter.
+6. Level-ups pause the game and show 3 cards. Mouse, number keys, and gamepad all work. Reroll (2 per run), Banish (1), and Skip (3 per run; keyboard X, gamepad B / East) each spend one charge, and that counter goes down. At 0 skips the Skip button is disabled and greyed, and the player must pick a card. If every offer is maxed, the gold/heal fallback still appears and does not spend a skip.
 7. Elites appear at 5:00 and 8:00 and charge after a visible pulsing orange-red line (clearly different from blood). Each drops a chest.
 8. With Longsword L8 and Whetstone owned, opening the 8:00 chest turns the Longsword into the Executioner's Greatsword with a 360° swing.
 9. Hits flash white and knock zombies back. Crits show yellow numbers. Elite kills freeze the screen briefly and shake it. Blood bursts on hits, and splatter decals pool on the ground and fade after about 20 s.
@@ -630,7 +633,7 @@ Throwing Axes, Fire Flask, Consecrated Ground; Spurs and Lodestone; 3 of the 4 e
 
 ## 9. Data schema appendix (ScriptableObjects)
 
-The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, every starting value for the 15-minute run, which fields already exist in code, and which fields to add. Field names below match the C# from PR #1. If a number in that sheet disagrees with this GDD, this GDD wins.
+The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, every starting value for the 15-minute run, which fields already exist in code, and which fields to add. Field names below match the C# from PR #1, except `PlayerStats.skips` and `StatType.Skips`, which this version adds and the code does not have yet. If a number in that sheet disagrees with this GDD, this GDD wins.
 
 ### 9.1 Enums
 | Enum | Values |
@@ -639,7 +642,7 @@ The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, e
 | `WeaponArchetype` | MeleeArc, Projectile, Orbit, LobbedProjectile, GroundZone, Aura |
 | `TargetingMode` | AimDirection, NearestEnemy, RandomEnemyInRange, PlayerCentered, MoveDirection |
 | `AimMode` (option) | Assisted, FullAuto |
-| `StatType` | MaxHealth, Recovery, Armor, MoveSpeed, Might, Area, Cooldown, Amount, Duration, ProjectileSpeed, CritChance, CritMultiplier, PickupRadius, Luck, Growth, Greed, Revivals, Rerolls, Banishes |
+| `StatType` | MaxHealth, Recovery, Armor, MoveSpeed, Might, Area, Cooldown, Amount, Duration, ProjectileSpeed, CritChance, CritMultiplier, PickupRadius, Luck, Growth, Greed, Revivals, Rerolls, Banishes, Skips |
 | `ModifierOp` | Add, PercentAdd, Multiply |
 | `EnemyBehavior` | Chase, ExplodeOnDeath, RangedKite, ChargeElite, Boss |
 | `EnemyTier` | Normal, Elite, Boss |
@@ -650,6 +653,8 @@ The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, e
 | `HitType` | Normal, Crit, Overkill, EliteHit, EliteKill, BossHit, BossPhaseChange, BossKill, PlayerHurt, Explosion |
 | `BloodIntensity` | Off, Low, Full |
 | `PickupType` | XpGem, RoastChicken, CoinPouch, HolyReliquary, Chest |
+
+`Skips` is new. Append it at the **end** of `StatType` in `GameEnums.cs` (the enum currently ends at `Banishes`). Do not insert it in the middle.
 
 ### 9.2 `WeaponDefinition`
 | field | type | units | example |
@@ -767,7 +772,7 @@ The Coder's fill sheet for these classes is `docs/DataTables.md`: asset paths, e
 Method: `int XpToNext(int level) => baseXp + Mathf.RoundToInt(linearPerLevel*(level-1)) + Mathf.FloorToInt(quadraticPerLevel*(level-1)*(level-1));`
 
 ### 9.9 `LevelUpRules`
-`cardsShown` int 3, `fourthCardLuckCoeff` float 0.10/0.15 luck, `fourthCardMax` 0.5, `ownedWeight` 1.5, `newWeight` 1.0, `evoBaseWeightMult` 1.5, `skipCrowns` 3, `skipHealPct` 0.05, `fallbackCards` List<PickupType>, `chestRollChances` float[] [0.75, 0.20, 0.05].
+`cardsShown` int 3, `fourthCardLuckCoeff` float 0.10/0.15 luck, `fourthCardMax` 0.5, `ownedWeight` 1.5, `newWeight` 1.0, `evoBaseWeightMult` 1.5, `skipCrowns` 3, `skipHealPct` 0.05, `fallbackCards` List<PickupType>, `chestRollChances` float[] [0.75, 0.20, 0.05]. The per-run skip **count** is not here. It is `PlayerStats.skips` (int, base 3), beside `rerolls` and `banishes`. There is no `skipPerChest`. `rerollPerChest` does not add skips. At 0 remaining, Skip is disabled. Fallback cards cost 0 skips.
 
 ### 9.10 `MetaUpgrade`
 | field | type | units | example |
@@ -808,7 +813,7 @@ Method: `int XpToNext(int level) => baseXp + Mathf.RoundToInt(linearPerLevel*(le
 | `critChance` / `critMultiplier` | float | n/a | 0.05 / 2.0 |
 | `pickupRadius` | float | m | 2.5 |
 | `luck`, `growth`, `greed` | float | mult | 1.0 |
-| `revivals`, `rerolls`, `banishes` | int | n/a | 0, 2, 1 |
+| `revivals`, `rerolls`, `banishes`, `skips` | int | per run | 0, 2, 1, 3 |
 | `dodgeDistance`, `dodgeDuration`, `dodgeIFrames`, `dodgeCooldown` | float | m, s, s, s | 4, 0.3, 0.3, 3 |
 | `weaponSlots`, `passiveSlots` | int | n/a | 4, 4 |
 
@@ -863,8 +868,8 @@ None right now. All v0.1 questions are resolved (see the header table and the ch
 | Topic | Decision / recommendation |
 |---|---|
 | XP model | **Shared pool (recommended).** All players share one XP bar and level up together. Each player picks their own card from their own roll. Total XP is scaled by `xpMult` (1.0 / 1.4 / 1.7 / 2.0), because the XP thresholds don't change. Why: no one falls behind, and nobody fights over gems. |
-| Level-up handling | The game pauses for everyone. Each player sees their own 3 cards at the same time and picks independently. A 20 s timer then auto-picks the highest-weight card. Rerolls and banishes are per player. |
-| Chests | The player who opens the chest gets its rolls, and evolution eligibility is checked for that player. Other players get +1 reroll each. Elites drop **1 chest per 2 players** (rounded up). |
+| Level-up handling | The game pauses for everyone. Each player sees their own 3 cards at the same time and picks independently. A 20 s timer then auto-picks the highest-weight card. Rerolls, banishes, and skips are per player. |
+| Chests | The player who opens the chest gets its rolls, and evolution eligibility is checked for that player. Other players get +1 reroll each. Nobody gets a skip from a chest. Elites drop **1 chest per 2 players** (rounded up). |
 | Downed and revive | At 0 HP a player is **downed**: crawls at 1.0 m/s, takes no damage, and bleeds out after **30 s**. A teammate stands within **1.5 m** for **3.0 s** to revive (progress decays at 2× when they leave). The revived player comes back at **40% HP** with **2 s** of i-frames. A Revival charge self-revives instantly when downed. The run ends when all players are downed or dead. |
 | Enemy count | `targetAlive` and `spawnRatePerSec` × **1.0 / 1.6 / 2.1 / 2.5** for 1-4 players |
 | Enemy HP | × **1.0 / 1.25 / 1.45 / 1.6** (normal and elite) |

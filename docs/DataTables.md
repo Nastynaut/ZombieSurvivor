@@ -75,6 +75,7 @@ File names:
 | `META_Revival` | `meta_revival` |
 | `META_Reroll` | `meta_reroll` |
 | `META_Banish` | `meta_banish` |
+| `META_Skip` | `meta_skip` |
 | `META_Amount` | `meta_amount` |
 | `SPN_FullRun` | (no id field) |
 | `CFG_LevelUpRules` | (no id field) |
@@ -106,7 +107,9 @@ These GDD numbers have no field today. Names are new in this sheet (flagged). Ap
 | `WaveEvent` | `ringRadius` | float | m | Horde Ring **16**. **0** on every other event means "use `ringMinDistance`–`ringMaxDistance`". |
 | `WaveEvent` | `sides` | int | count | 14:00 stampede **2**. **0** on every other event means one line / pattern default. |
 | `LevelUpRules` | `chestSpinSeconds` | float | s | **1.5**. |
-| `LevelUpRules` | `rerollPerChest` | int | count | **1** (§4.3: each chest grants +1 reroll). |
+| `LevelUpRules` | `rerollPerChest` | int | count | **1** (§4.3: each chest grants +1 reroll). Does **not** grant skips. Do not add `skipPerChest`. |
+| `PlayerStats` | `skips` | int | per run | **3**. Not in `PlayerStats.cs` today. Copy it onto `RuntimeStats` the same way `rerolls` and `banishes` are copied, including `ToRuntimeStats` and the `StatType` switch. |
+| `StatType` (enum) | `Skips` | append after `Banishes` | — | `meta_skip` reads this. `GameEnums.cs` currently ends at `Banishes`. Append only. |
 
 No new fields on `WeaponLevel`, `PassiveDefinition`, `EvolutionRecipe`, `MetaUpgrade`, or `WaveEntry`. Their GDD columns already exist.
 
@@ -327,16 +330,17 @@ One asset: `CFG_LevelUpRules`.
 | `chestRollChances` | 0.75, 0.20, 0.05 | 1 / 3 / 5 upgrades | keep |
 | `fallbackCards` | RoastChicken, CoinPouch | "Gold Pouch" then "Roast Chicken" | Store **CoinPouch, RoastChicken** so the list follows the GDD sentence. The initializer order is the reverse. |
 
-Set `chestSpinSeconds` **1.5**, `rerollPerChest` **1**.
+Set `chestSpinSeconds` **1.5**, `rerollPerChest` **1**. Do not add `skipPerChest`.
+
+Skip count is `PlayerStats.skips` **3**, not a `LevelUpRules` field. Each level-up Skip spends one. Armory `meta_skip` adds +1 per rank, 2 ranks (5 max). Chests do not add skips. At 0 the Skip button is disabled and greyed, and the player must pick. Gold Pouch / Roast Chicken, when every offer is maxed, still show and cost 0 skips. Dismissing the chest auto-spin does not spend a skip. The count is not in code yet: add `PlayerStats.skips` and append `StatType.Skips` (§0.1).
 
 Rules that stay in code, with no new number:
 
 - Card pool: owned weapons and passives under max level, plus a new weapon or passive if that slot type has room. Banished items stay out. The same item never appears twice in one roll.
-- Skip is unlimited (§3.1 `skips` −1, §4.3, and §8.4). It does not spend a counter. Reroll and Banish still do. Unlimited skips are pending Dustin's confirmation (GDD v0.4 changelog). Do not add `PlayerStats.skips`: §9.11 and `PlayerStats.cs` both omit it, and a −1 counter is not read by anything.
 - Gold Pouch **+25** crowns and Roast Chicken **30** HP already match `LevelUpService.GoldPouchCrowns` and `RoastChickenHeal`. Do not add fields and do not point the fallback card at the brazier Coin Pouch, which is **+10**. `PickupType.CoinPouch` is the code's token for the Gold Pouch card title.
 - "Luck multiplies the chance of 3 and 5" (§4.3) has **no coefficient**. Do not add one.
 - Same item never twice. Owned weight 1.5, new weight 1.0. 4th card only from the luck formula above. Base luck 1.0 gives 0.
-- Armory ranks add rerolls and banishes through `meta_reroll` / `meta_banish` (`valuePerRank` 1), not through this asset.
+- Armory ranks add rerolls, banishes, and skips through `meta_reroll` / `meta_banish` / `meta_skip` (`valuePerRank` 1), not through this asset.
 
 ### 2.4 `MetaUpgrade`
 
@@ -366,9 +370,12 @@ Rules that stay in code, with no new number:
 | `meta_revival` | Revival | Revivals | Add | 1 | 1 | 1000 | 0.25 | 1000 | 1000 | no, `unl_meta_revival` ReachLevel 30 |
 | `meta_reroll` | Reroll | Rerolls | Add | 1 | 3 | 250 | 0.25 | 250/625/1125 | 2000 | yes |
 | `meta_banish` | Banish | Banishes | Add | 1 | 3 | 200 | 0.25 | 200/500/900 | 1600 | yes |
+| `meta_skip` | Skip | Skips | Add | 1 | 2 | 200 | 0.25 | 200/500 | 700 | yes |
 | `meta_amount` | Amount | Amount | Add | 1 | 1 | 2500 | 0.25 | 2500 | 2500 | no, `unl_meta_amount` EvolveWeapon 1 |
 
-Grand total **23585**. Gate the two locked rows with `UnlockDefinition` (`unlocksMetaUpgrade`). There is no `unlockedByDefault` field on `MetaUpgrade`.
+Grand total **24285** (was 23585; `meta_skip` adds 700). Gate the two locked rows (`meta_revival`, `meta_amount`) with `UnlockDefinition`. `meta_skip` is available at start. There is no `unlockedByDefault` field on `MetaUpgrade`.
+
+`meta_skip` copies Banish's curve (`baseCost` 200, `costGrowth` 0.25) and stops at 2 ranks. Reroll's `baseCost` is 250, so those two were not one curve. Skip uses the cheaper one. `stat` is `StatType.Skips`, which the coder appends. Do not point this row at `Banishes`.
 
 ---
 
@@ -610,7 +617,7 @@ Already called out in the (c) tables. Collected here:
 7. **Factory content** is the slice subset: Longsword only, three passives, Shambler and Runner, no attacks, no recipes, no meta, schedule minutes 0–9 with Bloater/Spitter folded into Shambler. Those assets match §8.1, not §3–§5.
 8. **`ignoreCap`.** Initializer and the §9.7 sample are true. §5 prose: swarms overflow by at most +80; only elites and the boss ignore the cap. This sheet follows §5.
 9. **Minute-15 cap.** §1.2 says "cap 40 live". The §5 spawner still emits `spawnRatePerSec` when `alive > targetAlive`, until `hardCap` 350. Data stays target 40 and rate 1.5. Do not add a third number. Supervisor call if the trickle must hard-stop at 40.
-10. **Skip counter.** Resolved in GDD v0.4: §8.4 matches §3.1 and §4.3. Skip is unlimited and does not decrement a counter. Reroll and Banish still do. Pending Dustin's confirmation. Do not add `PlayerStats.skips` (§9.11 and the class both omit it).
+10. **Skip counter.** Dustin ruled it is limited. GDD §3.1, §4.3, and §8.4 agree: base 3, spent like Reroll and Banish, max 5 with `meta_skip`. `PlayerStats.cs` and `StatType` do not have it yet. Add both (§0.1). Do not add `skipPerChest`.
 11. **Fallback card token.** `PickupType` has `CoinPouch`, not Gold Pouch. Card pays 25 via `GoldPouchCrowns`. Brazier pouch pays 10. Do not share one payout.
 12. **`fallbackCards` order.** Initializer is RoastChicken then CoinPouch. GDD names Gold Pouch then Roast Chicken.
 13. **Slice boss vs full boss.** §8.1 is 8000 HP at 10:00 with no phase 2. §3.5 is 18000 HP at 15:00 with phase 2 and Bile Wave. One asset (`ENM_RottingKing`) holds the full boss only.
@@ -628,8 +635,8 @@ The Coder can check these by hand. No new balance number appears outside §5.
 
 1. Every asset in §0 exists at that path. `SPN_Slice` and the slice `CFG_RunConfig` still describe the 10-minute slice.
 2. Six base weapons have 8 `WeaponLevel` rows each. Four evolutions have 1 row, `maxLevel` 1, `isEvolution` true. Numbers match §1, including † cells.
-3. Six passives, four recipes, `CFG_LevelUpRules`, and sixteen meta upgrades match §2. `GetCost` matches the cost column. Locked meta rows are referenced by their unlock assets, not granted at start.
+3. Six passives, four recipes, `CFG_LevelUpRules`, and seventeen meta upgrades match §2, including `META_Skip` (200/500, row total 700, armory total 24,285). `GetCost` matches the cost column. Locked meta rows are `meta_revival` and `meta_amount` only. `PlayerStats.skips` is 3 and `StatType.Skips` exists at the end of the enum.
 4. Six enemies match §3, including `radius`, `keepDistanceMin` / `keepDistanceMax`, `prewarmCount`, and the attack rows. Shambler and Runner have empty `attackParams`. King HP is 18000, not the slice's 8000.
 5. `SPN_FullRun` has minutes 0–15, the §4.3 events, `hardCap` 350, `bossMinute` 15, and `boss` pointing at the King.
 6. A run that uses `SPN_FullRun` spawns only Shamblers at 0:00, Runners from 2:00, Bloaters from 4:00, Spitters from 6:00, Grave Knights at 5:00, 8:00, 10:30, and 13:00, and **one** Rotting King at 15:00. Normal mix stops at 15:00. Shamblers continue at 1.5/s. The fields in §0.1 exist on the classes and are set on the assets.
-7. Keyboard Skip is X. Esc still pauses. S still moves down. Gamepad Skip is B / East, and gamepad West still rerolls.
+7. Keyboard Skip is X. Esc still pauses. S still moves down. Gamepad Skip is B / East, and gamepad West still rerolls. A run starts with 3 skips. Each level-up Skip decrements the counter. At 0 the button is disabled and greyed. A chest does not add a skip. The gold/heal fallback does not spend one.
