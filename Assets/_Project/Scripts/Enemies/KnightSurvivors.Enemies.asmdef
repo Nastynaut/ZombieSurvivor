@@ -1,0 +1,14 @@
+{
+    "name": "KnightSurvivors.Enemies",
+    "rootNamespace": "KnightSurvivors.Enemies",
+    "references": ["KnightSurvivors.Core", "KnightSurvivors.Data", "KnightSurvivors.Pooling", "KnightSurvivors.Combat", "KnightSurvivors.Player", "KnightSurvivors.Pickups"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

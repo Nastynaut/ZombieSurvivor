@@ -1,0 +1,14 @@
+{
+    "name": "KnightSurvivors.Player",
+    "rootNamespace": "KnightSurvivors.Player",
+    "references": ["KnightSurvivors.Core", "KnightSurvivors.Data", "KnightSurvivors.Combat", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

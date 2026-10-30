@@ -1,0 +1,45 @@
+{
+    "name": "KnightSurvivors.Editor",
+    "rootNamespace": "KnightSurvivors.EditorTools",
+    "references": [
+        "KnightSurvivors.Core",
+        "KnightSurvivors.Data",
+        "KnightSurvivors.Pooling",
+        "KnightSurvivors.Combat",
+        "KnightSurvivors.Gore",
+        "KnightSurvivors.Cameras",
+        "KnightSurvivors.Player",
+        "KnightSurvivors.Pickups",
+        "KnightSurvivors.Enemies",
+        "KnightSurvivors.Progression",
+        "KnightSurvivors.Save",
+        "KnightSurvivors.UI",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Unity.Cinemachine",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.cinemachine",
+            "expression": "3.0.0",
+            "define": "KS_CINEMACHINE"
+        },
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "17.0.0",
+            "define": "KS_URP"
+        }
+    ],
+    "noEngineReferences": false
+}
