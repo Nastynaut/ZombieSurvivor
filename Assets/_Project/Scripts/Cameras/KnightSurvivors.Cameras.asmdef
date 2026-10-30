@@ -3,7 +3,6 @@
     "rootNamespace": "KnightSurvivors.Cameras",
     "references": [
         "KnightSurvivors.Core",
-        "KnightSurvivors.Data",
         "KnightSurvivors.Player",
         "Unity.Cinemachine"
     ],

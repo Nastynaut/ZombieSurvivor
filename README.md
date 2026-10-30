@@ -87,7 +87,7 @@ Nothing here could be compiled or run on the build machine (Unity isn't installe
 - [ ] Materials are **not pink**; floor is a grey checker; knight is light steel with a blue tabard and ring.
 - [ ] Transparent materials look right: ground ring and sword slash are see-through (set by code; check the Inspector shows *Surface Type: Transparent*).
 - [ ] Press Play: knight moves with WASD and left stick; **W moves up the screen** (toward the top-left of the grid).
-- [ ] Camera looks down at about 50°, diagonal across the tiles, follows smoothly with a slight lookahead.
+- [ ] Camera looks down at about 50°, diagonal across the tiles, follows smoothly. Lookahead is **off by default** (Dustin's preference); turn it on via `PlayerTargetGroup` → `PlayerCameraGroup` → **Lookahead Enabled** if you want the GDD 1.2 m lead.
 - [ ] **Camera smoothness:** rebuild the scene first (**Knight Survivors → Build Graybox Scene**; the prefab and camera changed). Walk in circles and zig-zag with no zombies near you: the knight, its ground ring and the floor grid should glide with **no fast jitter** and **no snap when you stop**, also while turning.
 - [ ] Zombies appear off-screen around you and walk in; Runners show up after minute 2.
 - [ ] Sword swings automatically in a 120° fan toward the mouse / right stick; zombies flash, bleed, die and sink.
