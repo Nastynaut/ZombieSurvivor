@@ -29,6 +29,11 @@ namespace KnightSurvivors.Pickups
         [HideInInspector] public float speed;
         [HideInInspector] public float spawnTime;
 
+        // Gameplay position (moved at 50 Hz) and the previous tick, so Update can lerp the drawn
+        // transform smoothly between them — same prev/curr pattern as EnemyManager / TickInterpolator.
+        [HideInInspector] public Vector3 simPosition;
+        [HideInInspector] public Vector3 previousPosition;
+
         private Vector3 visualBaseLocal;
 
         private void Awake()
@@ -43,6 +48,7 @@ namespace KnightSurvivors.Pickups
             targetPlayer = null;
             speed = 0f;
             spawnTime = Time.time;
+            simPosition = previousPosition = transform.position;
         }
 
         public void OnDespawned()

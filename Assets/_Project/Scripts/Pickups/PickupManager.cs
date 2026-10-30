@@ -11,6 +11,7 @@ namespace KnightSurvivors.Pickups
     /// Spawns, moves and collects XP gems (GDD 4.1).
     ///   * A gem within a living player's pickupRadius is "magnetized" to that player.
     ///   * Magnetized gems fly to the player starting at 12 m/s, speeding up by 20 m/s every second.
+    ///     Flight is simulated at 50 Hz and the drawn transform is lerped each frame (no 50 Hz stepping).
     ///   * On touch, XP (gem value x the player's growth) goes to the run's shared XP pool via IExperienceReceiver.
     ///   * At most 400 gems lie on the ground. Over the cap, a new gem's value is added to the oldest
     ///     gem that's more than 15 m from every player, instead of spawning a new object.
@@ -32,6 +33,13 @@ namespace KnightSurvivors.Pickups
         private readonly List<XpGem> gems = new List<XpGem>(512);
         private PoolService pool;
         private IExperienceReceiver xpReceiver;
+
+        // Fallback gem tiers (GDD 4.1) when no XpCurve is wired. STATIC so SpawnGem never allocates
+        // a fresh int[] on the hot path when xpCurve is null.
+        private static readonly int[] DefaultGemValues = { 1, 5, 25 };
+        private const int DefaultMaxGemsOnGround = 400;
+        private const float DefaultMagnetSpeed = 12f;
+        private const float DefaultMagnetAccel = 20f;
 
         public int GemCount => gems.Count;
 
@@ -55,8 +63,12 @@ namespace KnightSurvivors.Pickups
         {
             if (xp <= 0 || pool == null) return;
 
-            int[] values = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.gemValues : new[] { 1, 5, 25 };
-            int maxGems = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.maxGemsOnGround : 400;
+            int[] values = runConfig != null && runConfig.xpCurve != null && runConfig.xpCurve.gemValues != null
+                ? runConfig.xpCurve.gemValues
+                : DefaultGemValues;
+            int maxGems = runConfig != null && runConfig.xpCurve != null
+                ? runConfig.xpCurve.maxGemsOnGround
+                : DefaultMaxGemsOnGround;
 
             if (gems.Count >= maxGems)
             {
@@ -86,6 +98,8 @@ namespace KnightSurvivors.Pickups
             var gem = pool.Spawn(prefab, position, Quaternion.identity);
             if (gem == null) return;
             gem.value = xp;
+            // Seed both tick positions so the first Update lerp has nowhere to slide from.
+            gem.simPosition = gem.previousPosition = position;
             gems.Add(gem);
         }
 
@@ -94,7 +108,7 @@ namespace KnightSurvivors.Pickups
             // gems[] is in spawn order, so the first match is the oldest.
             for (int i = 0; i < gems.Count; i++)
             {
-                if (!gems[i].magnetized && PlayerRegistry.DistanceToClosestPlayer(gems[i].transform.position) > mergeMinDistance)
+                if (!gems[i].magnetized && PlayerRegistry.DistanceToClosestPlayer(gems[i].simPosition) > mergeMinDistance)
                 {
                     return gems[i];
                 }
@@ -106,15 +120,18 @@ namespace KnightSurvivors.Pickups
         private void FixedUpdate()
         {
             if (xpReceiver == null) ServiceLocator.TryGet(out xpReceiver);
-            float accel = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetAccel : 20f;
-            float startSpeed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : 12f;
+            float accel = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetAccel : DefaultMagnetAccel;
+            float startSpeed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : DefaultMagnetSpeed;
             float dt = Time.fixedDeltaTime;
             var players = PlayerRegistry.Players;
 
             for (int i = gems.Count - 1; i >= 0; i--)
             {
                 var gem = gems[i];
-                Vector3 gemPos = gem.transform.position;
+                // Advance the tick history first (same pattern as EnemyManager): previous = where we were,
+                // then write the new simPosition. Update() lerps the drawn transform between them.
+                gem.previousPosition = gem.simPosition;
+                Vector3 gemPos = gem.simPosition;
 
                 if (!gem.magnetized)
                 {
@@ -159,14 +176,22 @@ namespace KnightSurvivors.Pickups
                     continue;
                 }
 
-                gem.transform.position = gemPos + to / dist * (gem.speed * dt);
+                gem.simPosition = gemPos + to / dist * (gem.speed * dt);
             }
         }
 
         private void Update()
         {
+            // Draw each gem between the last two tick positions so magnet flight is smooth at any fps
+            // (without this, gems step at 50 Hz and look stuttery while flying in).
+            float alpha = GameTick.InterpolationAlpha;
             float t = Time.time;
-            for (int i = 0; i < gems.Count; i++) gems[i].Animate(t);
+            for (int i = 0; i < gems.Count; i++)
+            {
+                var gem = gems[i];
+                gem.transform.position = Vector3.Lerp(gem.previousPosition, gem.simPosition, alpha);
+                gem.Animate(t);
+            }
         }
 
         /// <summary>Pull every gem to its nearest living player (for a future Holy Reliquary pickup).</summary>
@@ -174,11 +199,11 @@ namespace KnightSurvivors.Pickups
         {
             for (int i = 0; i < gems.Count; i++)
             {
-                var nearest = PlayerRegistry.GetNearestAlivePlayer(gems[i].transform.position);
+                var nearest = PlayerRegistry.GetNearestAlivePlayer(gems[i].simPosition);
                 if (nearest == null) return;
                 gems[i].magnetized = true;
                 gems[i].targetPlayer = nearest;
-                gems[i].speed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : 12f;
+                gems[i].speed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : DefaultMagnetSpeed;
             }
         }
     }
