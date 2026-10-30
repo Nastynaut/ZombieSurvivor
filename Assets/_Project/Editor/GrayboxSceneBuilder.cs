@@ -335,21 +335,24 @@ namespace KnightSurvivors.EditorTools
             // axis here, a smoothed CameraTarget (TickInterpolator), and CameraRigSelfCheck repairs and
             // reports an old scene that still has y = 0.
             composer.Damping = new Vector3(0.25f, 0.25f, 0.25f);
-            // GDD says "1.2 m lookahead". Cinemachine's lookahead is in SECONDS (max 1), so 0.24 s at 5 m/s = 1.2 m.
+            // Cinemachine's own lookahead stays OFF. Its predictor drops the lead almost instantly when the
+            // knight stops (it smooths slowing down 30x less than speeding up), which was the "snap on stop"
+            // in Dustin's snap2 recording. PlayerCameraGroup (below) does the GDD's 1.2 m / 0.4 s lookahead
+            // itself and eases it back in gently when the knight stops.
             var look = composer.Lookahead;
-            look.Enabled = true;
-            look.Time = 0.24f;
-            // Lookahead estimates the target's velocity frame by frame. With a target that steps at 50 Hz, that
-            // estimate swings between 0 and "huge" and the camera shakes; with the smoothed target it's steady.
-            // The smoothing stays for gentle direction changes.
-            look.Smoothing = 0.4f;
-            look.IgnoreY = true;
+            look.Enabled = false;
             composer.Lookahead = look;
 
             var group = groupGo.AddComponent<PlayerCameraGroup>();
             group.composer = composer;
             group.baseDistance = 26f;
             group.maxZoomOut = 1.3f;
+            // Lookahead (GDD 2.1): 0.24 s of walking at 5 m/s = 1.2 m ahead, eased out over 0.4 s,
+            // eased back in over 0.5 s when the knight stops. All tunable on the component.
+            group.lookaheadEnabled = true;
+            group.lookaheadTime = 0.24f;
+            group.lookaheadSmoothTime = 0.4f;
+            group.lookaheadReleaseSmoothTime = 0.5f;
 
             brainOut = brain;
             vcamOut = vcam;

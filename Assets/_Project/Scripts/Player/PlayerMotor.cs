@@ -28,6 +28,13 @@ namespace KnightSurvivors.Player
         /// <summary>Current movement velocity (world, m/s).</summary>
         public Vector3 Velocity { get; private set; }
 
+        /// <summary>
+        /// How fast the knight REALLY moved on the last tick (world, flat, m/s). Same as Velocity in the open,
+        /// but smaller when a wall or gravestone blocks the move. The camera lookahead uses this, so the camera
+        /// doesn't lean into a wall the knight is pushing against.
+        /// </summary>
+        public Vector3 GroundVelocity { get; private set; }
+
         private CharacterController controller;
         private PlayerController player;
 
@@ -54,6 +61,7 @@ namespace KnightSurvivors.Player
             if (player == null || player.IsDead || player.Input == null)
             {
                 Velocity = Vector3.zero;
+                GroundVelocity = Vector3.zero;
                 return;
             }
 
@@ -64,6 +72,10 @@ namespace KnightSurvivors.Player
 
             Velocity = dir * player.Stats.moveSpeed;
             controller.Move((Velocity + Vector3.down * groundStickSpeed) * Time.fixedDeltaTime);
+            // CharacterController.velocity = what the Move above actually achieved. Drop the up/down part.
+            Vector3 achieved = controller.velocity;
+            achieved.y = 0f;
+            GroundVelocity = achieved;
 
             // Face where we're attacking (the arrow on the ground ring shows this).
             Vector3 face = player.AimDirection;

@@ -115,10 +115,14 @@ Couch co-op hooks into `PlayerInputManager` joins (`PlayerSpawner.useJoinHook`).
 > Project Settings → Player → **Active Input Handling** must be **Input System Package (New)** or **Both**.
 
 **Cinemachine 3** camera (GDD 2.2): `CinemachineCamera` with a fixed rotation **Euler(50, −45, 0)**, lens FOV **30**,
-`CinemachinePositionComposer` at distance **26**, damping (0.25, 0, 0.25), following a `CinemachineTargetGroup` of all
+`CinemachinePositionComposer` at distance **26**, damping (0.25, 0.25, 0.25), following a `CinemachineTargetGroup` of all
 living players. `PlayerCameraGroup` keeps the group's members up to date and zooms out up to **×1.3** as players spread.
-- **Lookahead:** the GDD says 1.2 m, but CM3's lookahead is **time-based** (seconds, max 1). We use **0.24 s**
-  (≈ 1.2 m at the knight's 5 m/s), smoothing 0.4, Ignore Y. *Open question: confirm the feel.*
+- **Lookahead (done by `PlayerCameraGroup`, not Cinemachine):** offset = average player velocity × **0.24 s**
+  (≈ 1.2 m at 5 m/s, GDD 2.1), eased out over **0.4 s** (`lookaheadSmoothTime`) and back in over **0.5 s**
+  (`lookaheadReleaseSmoothTime`), written to the composer's `TargetOffset`. CM3's own lookahead stays **off**: its
+  predictor smooths slowing down 30× faster than speeding up (0.4 s → 0.013 s), so with our instant stop the 1.2 m lead
+  vanished in ~1 frame and the camera snapped back (measured in `snap2.mp4`: ~35 px back at ~2.8× walk speed).
+  *Open question: confirm the feel.*
 - Movement is **camera-relative**: "up" on the stick moves up the screen.
 
 **Camera yaw convention.** "Yaw 45" in the GDD means the camera looks diagonally across the world grid. In code,

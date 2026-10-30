@@ -30,6 +30,8 @@ namespace KnightSurvivors.Cameras
     ///   - Camera: should be smooth. If CameraTarget is smooth but the camera isn't, the rig is the problem.
     ///   - Knight on screen px: how many pixels the knight moved on screen this frame, x and y separately.
     ///     Near 0 = the knight stays still on screen (good).
+    ///   - Lookahead: how far ahead of the knight the camera aims (PlayerCameraGroup), and how fast that
+    ///     lead changes. On a stop it should shrink to 0 smoothly (change speed ~1-2 m/s), never in one frame.
     ///   - Rig: the composer's damping / lookahead / distance as they really are at runtime.
     ///   - ticks/frame: how many 50 Hz FixedUpdates ran before each frame (1,1,1 at 50 fps; 0,1,0,1 at
     ///     100 fps; 1,1,1,1,0 at 60 fps). alpha: TickInterpolator's 0..1 blend value.
@@ -38,7 +40,7 @@ namespace KnightSurvivors.Cameras
     public class CameraJitterReadout : MonoBehaviour
     {
         /// <summary>Shown on screen and in the Console, so we can tell which version of the scripts Unity runs.</summary>
-        public const string BuildStamp = "diag-2026-10-30b (input fix)";
+        public const string BuildStamp = "diag-2026-10-30c (smooth lookahead)";
 
         private const int History = 240;     // frames kept (enough for 0.5 s at 480 fps)
         private const float Window = 0.5f;   // seconds shown as min..max
@@ -49,7 +51,7 @@ namespace KnightSurvivors.Cameras
         private readonly float[] frameTimes = new float[History];
         private readonly float[][] tracks = new float[TrackCount][];
         private const int CamX = 0, CamY = 1, CamZ = 2, TgtX = 3, TgtY = 4, TgtZ = 5, RootSpeed = 6, RootY = 7,
-            ScreenX = 8, ScreenY = 9, TrackCount = 10;
+            ScreenX = 8, ScreenY = 9, LookSize = 10, LookRate = 11, TrackCount = 12;
         private readonly int[] ticks = new int[History];
         private int head;
         private int filled;
@@ -57,7 +59,7 @@ namespace KnightSurvivors.Cameras
         private float smoothedMs;
         private int ticksThisFrame;
         private bool hasLast;
-        private Vector3 lastCamera, lastTarget, lastRoot, lastScreen;
+        private Vector3 lastCamera, lastTarget, lastRoot, lastScreen, lastLook;
         private float lastAlpha;
         private int frameCounter;
 
@@ -111,7 +113,7 @@ namespace KnightSurvivors.Cameras
             var panelRect = (RectTransform)panel.transform;
             panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0f, 1f);
             panelRect.anchoredPosition = new Vector2(8f, -8f);
-            panelRect.sizeDelta = new Vector2(620f, 350f);
+            panelRect.sizeDelta = new Vector2(620f, 370f);
             var background = panel.AddComponent<Image>();
             background.color = new Color(0f, 0f, 0f, 0.78f);
             background.raycastTarget = false; // never blocks clicks on the game UI
@@ -181,6 +183,10 @@ namespace KnightSurvivors.Cameras
             Vector3 rootPos = player.transform.position;
             Vector3 screen = cam.WorldToScreenPoint(targetPos);
 
+            // The camera lookahead offset (zero if there's no PlayerCameraGroup in the scene).
+            var cameraGroup = PlayerCameraGroup.Current;
+            Vector3 look = cameraGroup != null ? cameraGroup.LookaheadOffset : Vector3.zero;
+
             var interp = player.GetComponent<TickInterpolator>();
             lastAlpha = interp != null ? interp.LastAlpha : -1f;
 
@@ -203,6 +209,8 @@ namespace KnightSurvivors.Cameras
                 tracks[RootY][head] = rootPos.y;
                 tracks[ScreenX][head] = screen.x - lastScreen.x; // pixels this frame
                 tracks[ScreenY][head] = screen.y - lastScreen.y;
+                tracks[LookSize][head] = look.magnitude;                // metres ahead of the knight
+                tracks[LookRate][head] = (look - lastLook).magnitude / dt; // how fast the lead changes, m/s
                 ticks[head] = ticksThisFrame;
             }
 
@@ -210,6 +218,7 @@ namespace KnightSurvivors.Cameras
             lastTarget = targetPos;
             lastRoot = rootPos;
             lastScreen = screen;
+            lastLook = look;
             hasLast = true;
             ticksThisFrame = 0;
         }
@@ -259,6 +268,27 @@ namespace KnightSurvivors.Cameras
             text.Append('\n');
         }
 
+        // "Lookahead offset 0.00..1.20 m (now 0.83 -> target 1.20)  change max 1.9 m/s  ease 0.40 out / 0.50 in"
+        private void AppendLookahead()
+        {
+            var cameraGroup = PlayerCameraGroup.Current;
+            if (cameraGroup == null)
+            {
+                text.Append("Lookahead: no PlayerCameraGroup in the scene\n");
+                return;
+            }
+            text.Append("Lookahead offset ");
+            AppendRange(LookSize, "0.00");
+            text.Append(" m (now ").Append(cameraGroup.LookaheadOffset.magnitude.ToString("0.00"))
+                .Append(" -> target ").Append(cameraGroup.LookaheadTarget.magnitude.ToString("0.00"))
+                .Append(")  change max ");
+            Range(LookRate, out float _, out float maxRate);
+            text.Append(maxRate.ToString("0.0")).Append(" m/s  ease ")
+                .Append(cameraGroup.lookaheadSmoothTime.ToString("0.00")).Append(" out / ")
+                .Append(cameraGroup.lookaheadReleaseSmoothTime.ToString("0.00")).Append(" in")
+                .Append(cameraGroup.lookaheadEnabled ? "" : "  (DISABLED)").Append('\n');
+        }
+
         private string BuildText()
         {
             text.Clear();
@@ -285,6 +315,7 @@ namespace KnightSurvivors.Cameras
             text.Append("   y ");
             AppendRange(ScreenY, "0.0");
             text.Append('\n');
+            AppendLookahead();
             text.Append("Rig: ").Append(RigStatus).Append('\n');
             text.Append("Wiring: ").Append(WiringStatus);
             return text.ToString();

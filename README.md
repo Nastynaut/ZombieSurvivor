@@ -45,6 +45,7 @@ Esc / Start is bound but the pause menu isn't built yet. When you die: **Restart
 | Console shows only warnings, none of the grey `[Knight Survivors] ...` lines | The Console's **info filter** (grey speech-bubble button, top-right of the Console) is off. Click it so all three buttons (info / warning / error) are on. |
 | Knight falls through the floor | Re-run the builder (it adds the invisible `GroundCollider`). |
 | Builder dialog "Stop Play mode first" | Exit Play mode, then run it again. |
+| Camera **snaps back** when the knight stops | Console says `Turned off Cinemachine's lookahead...` = old scene: re-run the builder. To tune the lookahead: select `PlayerTargetGroup` → `PlayerCameraGroup` → **Lookahead** (time 0.24, ease out 0.4, ease in 0.5). |
 
 Re-running the builder is safe and **overwrites** generated files (`Art/Placeholder`, `Data`, `Input`, `Scenes/Graybox.unity`).
 To experiment with numbers, **duplicate** an asset in `Assets/_Project/Data` and point `CFG_RunConfig` at your copy.
@@ -57,7 +58,7 @@ Select `Systems` → `PlayerSpawner` → tick **Use Join Hook**, then Play and p
 
 | System | Where | Notes |
 |---|---|---|
-| Movement + iso camera | `Player/PlayerMotor`, Cinemachine `CM_IsoCamera` | CharacterController, 5 m/s, camera-relative. FOV 30, pitch 50, yaw 45, 26 m. |
+| Movement + iso camera | `Player/PlayerMotor`, Cinemachine `CM_IsoCamera` | CharacterController, 5 m/s, camera-relative. FOV 30, pitch 50, yaw 45, 26 m. Lookahead 1.2 m by `Cameras/PlayerCameraGroup` (eased 0.4 s out / 0.5 s in). |
 | Spawner | `Enemies/EnemySpawner` | Time-based rows from `SPN_Slice` (min 0–9), ring 20–24 m, recycle > 35 m, cap 350. |
 | Longsword | `Combat/LongswordWeapon` | 120° arc, 8 levels from the GDD, aimed (Assisted). |
 | Enemies | `Enemies/EnemyManager`, `Enemy` | Shambler + Runner; seek + separation via spatial hash; health, hit flash, death sink. |

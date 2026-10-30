@@ -160,7 +160,7 @@ namespace KnightSurvivors.Cameras
 
             var look = composer.Lookahead;
             CameraJitterReadout.RigStatus =
-                $"damping {damping.x:0.00}/{damping.y:0.00}/{damping.z:0.00}  lookahead " +
+                $"damping {damping.x:0.00}/{damping.y:0.00}/{damping.z:0.00}  CM lookahead " +
                 (look.Enabled ? $"ON {look.Time:0.00}s smooth {look.Smoothing:0.0}{(look.IgnoreY ? " ignoreY" : "")}" : "OFF") +
                 $"  distance {composer.CameraDistance:0.0}";
         }
