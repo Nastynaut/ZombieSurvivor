@@ -47,9 +47,6 @@ namespace KnightSurvivors.Player
         private bool[] positionOnly;
         private bool initialized;
 
-        /// <summary>The alpha used for the last smoothing pass (shown by the TEMPORARY jitter readout).</summary>
-        public float LastAlpha { get; private set; }
-
         private void Awake()
         {
             EnsureInitialized();
@@ -156,7 +153,6 @@ namespace KnightSurvivors.Player
         {
             EnsureInitialized();
             float alpha = GameTick.InterpolationAlpha;
-            LastAlpha = alpha;
             Vector3 smoothedPosition = Vector3.Lerp(previousPosition, currentPosition, alpha);
             Quaternion smoothedRotation = Quaternion.Slerp(previousRotation, currentRotation, alpha);
 

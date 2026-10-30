@@ -86,7 +86,7 @@ namespace KnightSurvivors.Player
         ///   - no TickInterpolator?            add one
         ///   - no cameraTarget, or it IS the root? create a "CameraTarget" child at the feet
         ///   - cameraTarget not smoothed?       register it with the TickInterpolator
-        /// Public so the TEMPORARY CameraRigSelfCheck can call it too. Returns true if it had to repair something.
+        /// Returns true if it had to repair something (missing CameraTarget / not on the interpolator).
         /// </summary>
         public bool EnsureSmoothedCameraTarget()
         {

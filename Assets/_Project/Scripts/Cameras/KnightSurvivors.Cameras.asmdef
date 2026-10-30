@@ -5,9 +5,7 @@
         "KnightSurvivors.Core",
         "KnightSurvivors.Data",
         "KnightSurvivors.Player",
-        "Unity.Cinemachine",
-        "Unity.InputSystem",
-        "UnityEngine.UI"
+        "Unity.Cinemachine"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

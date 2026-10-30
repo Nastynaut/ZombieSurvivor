@@ -82,8 +82,7 @@ namespace KnightSurvivors.EditorTools
                 BuildArena(m);
                 BuildLighting();
                 var systems = BuildSystems(data, m, gems, bloodHit, bloodCrit, bloodKill, bloodBig, dust, decal);
-                BuildCamera(out var brain, out var vcam);
-                AddCameraDiagnostics(systems, brain, vcam);
+                BuildCamera();
                 BuildUI();
 
                 PlaceholderFactory.EnsureFolder("Assets/_Project/Scenes");
@@ -92,10 +91,7 @@ namespace KnightSurvivors.EditorTools
                 AssetDatabase.SaveAssets();
 
                 Selection.activeGameObject = systems;
-                // TEMPORARY: a yellow warning (not a grey log) with the build stamp, so it shows even when the
-                // Console's info filter is off and proves which version of the scripts built the scene.
-                Debug.LogWarning("[Knight Survivors] Graybox scene built: " + ScenePath + " (scripts " +
-                                 KnightSurvivors.Cameras.CameraJitterReadout.BuildStamp + "). Press Play!");
+                Debug.Log("[Knight Survivors] Graybox scene built: " + ScenePath + ". Press Play!");
             }
             finally
             {
@@ -226,8 +222,6 @@ namespace KnightSurvivors.EditorTools
 
             systems.AddComponent<RunManager>().runConfig = data.runConfig;
             systems.AddComponent<LevelUpService>().runConfig = data.runConfig;
-            // TEMPORARY debug: F1 toggles camera shake (see CameraShakeDebugToggle). Remove with it.
-            systems.AddComponent<CameraShakeDebugToggle>().runConfig = data.runConfig;
 
             var enemies = systems.AddComponent<EnemyManager>();
             enemies.runConfig = data.runConfig;
@@ -275,7 +269,7 @@ namespace KnightSurvivors.EditorTools
 
         // ------------------------------------------------------------------ camera (GDD 2.2)
 
-        private static void BuildCamera(out CinemachineBrain brainOut, out CinemachineCamera vcamOut)
+        private static void BuildCamera()
         {
             // The real Unity camera. The CinemachineBrain moves it to wherever the active Cinemachine camera says.
             var main = new GameObject("Main Camera");
@@ -332,8 +326,7 @@ namespace KnightSurvivors.EditorTools
             // a 60 Hz screen) while A/D was smooth (5.5 +/- 0.4 px). That is exactly what damping (0.25, 0,
             // 0.25) does when the followed point still steps at 50 Hz: y = 0 passes every step straight to
             // the screen-vertical axis, x = 0.25 filters them out horizontally. So: same damping on every
-            // axis here, a smoothed CameraTarget (TickInterpolator), and CameraRigSelfCheck repairs and
-            // reports an old scene that still has y = 0.
+            // axis here, plus a smoothed CameraTarget (TickInterpolator).
             composer.Damping = new Vector3(0.25f, 0.25f, 0.25f);
             // Cinemachine's own lookahead stays OFF. Its predictor drops the lead almost instantly when the
             // knight stops (it smooths slowing down 30x less than speeding up), which was the "snap on stop"
@@ -355,51 +348,8 @@ namespace KnightSurvivors.EditorTools
             group.lookaheadSmoothTime = 0.4f;
             group.lookaheadReleaseSmoothTime = 0.5f;
 
-            brainOut = brain;
-            vcamOut = vcam;
         }
 
-        // TEMPORARY (camera jitter diagnostics, remove in the PR #1 cleanup).
-        // Puts the debug tools straight into the scene, on "Systems", so they don't depend on the
-        // CameraDebugBootstrap running (in Dustin's run it didn't). The bootstrap stays as a backup for
-        // scenes built before this change; it sees these components and does nothing.
-        private static void AddCameraDiagnostics(GameObject systems, CinemachineBrain brain, CinemachineCamera vcam)
-        {
-            // The plain-code follow camera for F2, off by default (Cinemachine is the normal camera).
-            var simple = brain.gameObject.AddComponent<SimpleIsoFollow>();
-            simple.enabled = false;
-
-            systems.AddComponent<CameraJitterReadout>(); // the on-screen numbers (visible by default, F3 hides)
-            var toggle = systems.AddComponent<CameraFollowModeToggle>(); // F2
-            toggle.brain = brain;
-            toggle.virtualCamera = vcam;
-            toggle.simpleFollow = simple;
-            var check = systems.AddComponent<CameraRigSelfCheck>(); // wiring check + repair
-            check.brain = brain;
-            check.virtualCamera = vcam;
-            systems.AddComponent<CameraDebugHost>(); // re-wires after reloads, stops the bootstrap duplicating
-
-            // Check our own work, loudly. Every type above is a direct, typed reference (no lookups by name,
-            // no reflection), so if the Cameras assembly didn't compile, this builder wouldn't compile either.
-            // Still, count what is really on the objects now and name anything missing in red.
-            int attached = 0;
-            attached += CountOrComplain<CameraShakeDebugToggle>(systems);
-            attached += CountOrComplain<CameraJitterReadout>(systems);
-            attached += CountOrComplain<CameraFollowModeToggle>(systems);
-            attached += CountOrComplain<CameraRigSelfCheck>(systems);
-            attached += CountOrComplain<CameraDebugHost>(systems);
-            attached += CountOrComplain<SimpleIsoFollow>(brain.gameObject);
-            Debug.LogWarning("[Knight Survivors] Diagnostics attached: " + attached + " components (expected 6), build " +
-                             CameraJitterReadout.BuildStamp + ".");
-        }
-
-        // 1 if the object has a T, otherwise a red error naming the missing component and 0.
-        private static int CountOrComplain<T>(GameObject go) where T : Component
-        {
-            if (go.GetComponent<T>() != null) return 1;
-            Debug.LogError("[Knight Survivors] Diagnostics component MISSING: " + typeof(T).Name + " on '" + go.name + "'.");
-            return 0;
-        }
 
         // ------------------------------------------------------------------ UI
 
