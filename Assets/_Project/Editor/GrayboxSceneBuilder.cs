@@ -347,9 +347,10 @@ namespace KnightSurvivors.EditorTools
             group.composer = composer;
             group.baseDistance = 26f;
             group.maxZoomOut = 1.3f;
-            // Lookahead (GDD 2.1): 0.24 s of walking at 5 m/s = 1.2 m ahead, eased out over 0.4 s,
-            // eased back in over 0.5 s when the knight stops. All tunable on the component.
-            group.lookaheadEnabled = true;
+            // Lookahead code stays, but default OFF (Dustin prefers the camera centred on the knight).
+            // Tick Lookahead Enabled on PlayerCameraGroup to get the GDD's 1.2 m lead (0.24 s at 5 m/s,
+            // ease out 0.4 s / in 0.5 s). Cinemachine's own lookahead stays off either way.
+            group.lookaheadEnabled = false;
             group.lookaheadTime = 0.24f;
             group.lookaheadSmoothTime = 0.4f;
             group.lookaheadReleaseSmoothTime = 0.5f;

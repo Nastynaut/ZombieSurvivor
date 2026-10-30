@@ -21,12 +21,16 @@ namespace KnightSurvivors.Cameras
     /// lead vanished in about one frame and the camera snapped back toward the knight at ~3x walking speed.
     /// Dustin's snap2 recording measured exactly that: 32-37 px back in ~7 frames on every stop.
     /// Here we smooth the OFFSET itself, the same gentle way in both directions.
+    ///
+    /// Default is OFF: Dustin prefers the camera staying centred on the knight (no lead). Tick the
+    /// Lookahead Enabled box on this component (or set it in the scene builder) to turn it back on.
+    /// Cinemachine's own lookahead stays off either way.
     /// </summary>
     [RequireComponent(typeof(CinemachineTargetGroup))]
     [DefaultExecutionOrder(-100)] // runs before the CinemachineBrain's LateUpdate, so the camera uses this frame's values
     public class PlayerCameraGroup : MonoBehaviour
     {
-        /// <summary>The group in the scene (there is only one). The TEMP camera readout reads the lookahead from it.</summary>
+        /// <summary>The group in the scene (there is only one). Handy for other systems that need the shared camera group.</summary>
         public static PlayerCameraGroup Current { get; private set; }
 
         [Tooltip("The PositionComposer on the CinemachineCamera (for co-op zoom-out).")]
@@ -41,8 +45,8 @@ namespace KnightSurvivors.Cameras
         public float memberRadius = 1f;
 
         [Header("Lookahead (GDD 2.1: 1.2 m ahead, smoothing 0.4 s)")]
-        [Tooltip("Turn the camera lookahead on/off.")]
-        public bool lookaheadEnabled = true;
+        [Tooltip("Turn the camera lookahead on/off. Default OFF (Dustin's preference: camera stays on the knight).")]
+        public bool lookaheadEnabled = false;
 
         [Tooltip("How far ahead to look, in SECONDS of walking: offset = velocity x this. " +
                  "0.24 s at the base 5 m/s = the GDD's 1.2 m (and a faster knight looks a bit further ahead).")]
@@ -55,7 +59,7 @@ namespace KnightSurvivors.Cameras
                  "Bigger = the camera settles back more slowly. 0.5 feels calm; 0 would bring the snap back.")]
         public float lookaheadReleaseSmoothTime = 0.5f;
 
-        /// <summary>The smoothed offset the camera uses right now (world, m). Shown in the F3 readout.</summary>
+        /// <summary>The smoothed offset the camera uses right now (world, m). Zero when lookahead is off.</summary>
         public Vector3 LookaheadOffset => lookaheadOffset;
 
         /// <summary>Where the offset is heading: average player velocity x lookaheadTime (world, m).</summary>

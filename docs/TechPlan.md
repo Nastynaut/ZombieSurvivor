@@ -119,10 +119,11 @@ Couch co-op hooks into `PlayerInputManager` joins (`PlayerSpawner.useJoinHook`).
 living players. `PlayerCameraGroup` keeps the group's members up to date and zooms out up to **×1.3** as players spread.
 - **Lookahead (done by `PlayerCameraGroup`, not Cinemachine):** offset = average player velocity × **0.24 s**
   (≈ 1.2 m at 5 m/s, GDD 2.1), eased out over **0.4 s** (`lookaheadSmoothTime`) and back in over **0.5 s**
-  (`lookaheadReleaseSmoothTime`), written to the composer's `TargetOffset`. CM3's own lookahead stays **off**: its
-  predictor smooths slowing down 30× faster than speeding up (0.4 s → 0.013 s), so with our instant stop the 1.2 m lead
-  vanished in ~1 frame and the camera snapped back (measured in `snap2.mp4`: ~35 px back at ~2.8× walk speed).
-  *Open question: confirm the feel.*
+  (`lookaheadReleaseSmoothTime`), written to the composer's `TargetOffset`. **Defaults to OFF** (Dustin's preference:
+  camera stays centred on the knight); tick **Lookahead Enabled** on `PlayerCameraGroup` to turn it on. CM3's own
+  lookahead stays **off**: its predictor smooths slowing down 30× faster than speeding up (0.4 s → 0.013 s), so with
+  our instant stop the 1.2 m lead vanished in ~1 frame and the camera snapped back (measured in `snap2.mp4`: ~35 px
+  back at ~2.8× walk speed).
 - Movement is **camera-relative**: "up" on the stick moves up the screen.
 
 **Camera yaw convention.** "Yaw 45" in the GDD means the camera looks diagonally across the world grid. In code,
