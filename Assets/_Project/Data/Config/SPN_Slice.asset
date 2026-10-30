@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ea21b7e41009da47990a3f4b4cf50a0, type: 3}
+  m_Name: SPN_Slice
+  m_EditorClassIdentifier: KnightSurvivors.Data::KnightSurvivors.Data.SpawnSchedule
+  runLengthMinutes: 10
+  bossMinute: 10
+  boss: {fileID: 0}
+  hardCap: 350
+  ringMinDistance: 20
+  ringMaxDistance: 24
+  recycleDistance: 35
+  moveDirBias: 0.6
+  entries:
+  - minute: 0
+    targetAlive: 15
+    spawnRatePerSec: 1
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 100
+  - minute: 1
+    targetAlive: 25
+    spawnRatePerSec: 1.5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 100
+  - minute: 2
+    targetAlive: 35
+    spawnRatePerSec: 2
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 80
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 20
+  - minute: 3
+    targetAlive: 50
+    spawnRatePerSec: 2.5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 4
+    targetAlive: 60
+    spawnRatePerSec: 3
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 5
+    targetAlive: 70
+    spawnRatePerSec: 3.5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 6
+    targetAlive: 85
+    spawnRatePerSec: 4
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 7
+    targetAlive: 100
+    spawnRatePerSec: 4.5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 8
+    targetAlive: 120
+    spawnRatePerSec: 5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 75
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 25
+  - minute: 9
+    targetAlive: 140
+    spawnRatePerSec: 5.5
+    mix:
+    - enemy: {fileID: 11400000, guid: 95cef35e3235f8b45b5d4691a2614fb3, type: 2}
+      weightPct: 70
+    - enemy: {fileID: 11400000, guid: f0a4792b32e107c419004b241de32d4b, type: 2}
+      weightPct: 30
+  events: []
+  coopScaling: {fileID: 11400000, guid: 7cf10e27fcd0d884f8faf984595961e7, type: 2}
