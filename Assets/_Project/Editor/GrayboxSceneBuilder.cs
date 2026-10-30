@@ -92,7 +92,10 @@ namespace KnightSurvivors.EditorTools
                 AssetDatabase.SaveAssets();
 
                 Selection.activeGameObject = systems;
-                Debug.Log("[Knight Survivors] Graybox scene built: " + ScenePath + ". Press Play!");
+                // TEMPORARY: a yellow warning (not a grey log) with the build stamp, so it shows even when the
+                // Console's info filter is off and proves which version of the scripts built the scene.
+                Debug.LogWarning("[Knight Survivors] Graybox scene built: " + ScenePath + " (scripts " +
+                                 KnightSurvivors.Cameras.CameraJitterReadout.BuildStamp + "). Press Play!");
             }
             finally
             {

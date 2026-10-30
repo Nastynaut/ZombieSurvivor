@@ -1,6 +1,5 @@
 using Unity.Cinemachine;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace KnightSurvivors.Cameras
 {
@@ -12,8 +11,8 @@ namespace KnightSurvivors.Cameras
     ///   SimpleFollow - SimpleIsoFollow, a few lines of plain code (no Cinemachine at all)
     /// Every press prints "[TEMP DEBUG] F2 follow: ..." to the Console; the readout shows the mode too.
     ///
-    /// The key is read through its OWN InputAction bound to &lt;Keyboard&gt;/f2 (enabled in OnEnable), not
-    /// through the player's PlayerInput, so it works no matter which control scheme the player uses.
+    /// The key is read through DebugKeys (not the player's PlayerInput), so it works no matter which
+    /// control scheme the player uses AND whatever the project's Active Input Handling setting is.
     /// (Click inside the Game view first: Unity only sends keys to the game when the Game view has focus.)
     /// </summary>
     public class CameraFollowModeToggle : MonoBehaviour
@@ -32,27 +31,9 @@ namespace KnightSurvivors.Cameras
         [Tooltip("The plain-code follow camera on the main camera.")]
         public SimpleIsoFollow simpleFollow;
 
-        private InputAction toggleAction;
-
-        private void OnEnable()
-        {
-            if (toggleAction == null) toggleAction = new InputAction("TEMP_ToggleFollow", InputActionType.Button, "<Keyboard>/f2");
-            toggleAction.Enable();
-        }
-
-        private void OnDisable()
-        {
-            if (toggleAction != null) toggleAction.Disable();
-        }
-
-        private void OnDestroy()
-        {
-            if (toggleAction != null) toggleAction.Dispose();
-        }
-
         private void Update()
         {
-            if (toggleAction == null || !toggleAction.WasPressedThisFrame()) return;
+            if (!DebugKeys.WasPressed(DebugKeys.Key.F2)) return;
             SetMode(Current == Mode.Cinemachine ? Mode.SimpleFollow : Mode.Cinemachine, log: true);
         }
 
@@ -71,7 +52,7 @@ namespace KnightSurvivors.Cameras
             {
                 string name = mode == Mode.Cinemachine ? "Cinemachine" : "SimpleFollow";
                 string note = simpleFollow == null ? " (SimpleFollow not available yet: camera not wired)" : "";
-                Debug.Log($"[TEMP DEBUG] F2 follow: {name}{note}");
+                Debug.LogWarning($"[TEMP DEBUG] F2 follow: {name}{note}");
             }
         }
     }

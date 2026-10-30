@@ -1,7 +1,6 @@
 using System.Text;
 using KnightSurvivors.Player;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace KnightSurvivors.Cameras
@@ -39,7 +38,7 @@ namespace KnightSurvivors.Cameras
     public class CameraJitterReadout : MonoBehaviour
     {
         /// <summary>Shown on screen and in the Console, so we can tell which version of the scripts Unity runs.</summary>
-        public const string BuildStamp = "diag-2026-10-30 (W/S fix)";
+        public const string BuildStamp = "diag-2026-10-30b (input fix)";
 
         private const int History = 240;     // frames kept (enough for 0.5 s at 480 fps)
         private const float Window = 0.5f;   // seconds shown as min..max
@@ -63,7 +62,6 @@ namespace KnightSurvivors.Cameras
         private int frameCounter;
 
         private readonly StringBuilder text = new StringBuilder(2048);
-        private InputAction toggleAction;
         private GameObject canvasObject;
         private Text label;
 
@@ -77,26 +75,22 @@ namespace KnightSurvivors.Cameras
         {
             for (int i = 0; i < TrackCount; i++) tracks[i] = new float[History];
             BuildCanvas();
-            Debug.Log("[TEMP DEBUG] Camera jitter readout created (" + BuildStamp + "), visible by default. F3 hides it.");
+            // A WARNING (yellow) on purpose: it still shows if the Console's grey "info" filter is switched off.
+            Debug.LogWarning("[TEMP DEBUG] Camera jitter readout created (" + BuildStamp + "), visible by default. F3 hides it.");
         }
 
         private void OnEnable()
         {
-            // Our OWN action bound straight to the F3 key, so it works whatever the player's PlayerInput does.
-            if (toggleAction == null) toggleAction = new InputAction("TEMP_ToggleReadout", InputActionType.Button, "<Keyboard>/f3");
-            toggleAction.Enable();
             if (canvasObject != null) canvasObject.SetActive(visible);
         }
 
         private void OnDisable()
         {
-            if (toggleAction != null) toggleAction.Disable();
             if (canvasObject != null) canvasObject.SetActive(false);
         }
 
         private void OnDestroy()
         {
-            if (toggleAction != null) toggleAction.Dispose();
             if (canvasObject != null) Destroy(canvasObject);
         }
 
@@ -115,7 +109,7 @@ namespace KnightSurvivors.Cameras
             var panelRect = (RectTransform)panel.transform;
             panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0f, 1f);
             panelRect.anchoredPosition = new Vector2(8f, -8f);
-            panelRect.sizeDelta = new Vector2(620f, 330f);
+            panelRect.sizeDelta = new Vector2(620f, 350f);
             var background = panel.AddComponent<Image>();
             background.color = new Color(0f, 0f, 0f, 0.78f);
             background.raycastTarget = false; // never blocks clicks on the game UI
@@ -149,11 +143,12 @@ namespace KnightSurvivors.Cameras
 
         private void LateUpdate()
         {
-            if (toggleAction != null && toggleAction.WasPressedThisFrame())
+            // F3 is read through DebugKeys, which works whatever the Active Input Handling setting is.
+            if (DebugKeys.WasPressed(DebugKeys.Key.F3))
             {
                 visible = !visible;
                 if (canvasObject != null) canvasObject.SetActive(visible);
-                Debug.Log("[TEMP DEBUG] F3 readout: " + (visible ? "ON" : "OFF"));
+                Debug.LogWarning("[TEMP DEBUG] F3 readout: " + (visible ? "ON" : "OFF"));
             }
 
             float dt = Time.unscaledDeltaTime;
@@ -274,6 +269,7 @@ namespace KnightSurvivors.Cameras
             for (int i = Mathf.Min(filled, 24) - 1; i >= 0; i--) text.Append(ticks[(head - i + History) % History]);
             text.Append('\n');
             text.Append("Follow mode: ").Append(CameraFollowModeToggle.Current.ToString()).Append('\n');
+            text.Append("Active Input Handling: ").Append(DebugKeys.ActiveInputHandling).Append('\n');
             text.Append("Speeds in camera axes, m/s, min..max over 0.5 s (x=screen L/R, y=screen up, z=depth)\n");
             AppendAxes("Camera      ", CamX, CamY, CamZ);
             AppendAxes("CameraTarget", TgtX, TgtY, TgtZ);

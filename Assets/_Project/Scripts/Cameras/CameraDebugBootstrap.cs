@@ -14,7 +14,8 @@ namespace KnightSurvivors.Cameras
     /// The old version ran ONCE right after the scene loaded and silently gave up if Camera.main or the
     /// CinemachineBrain wasn't there at that exact moment, so no readout and no F2/F3 ever existed and
     /// there was no message saying why. Now:
-    ///   1. It logs the moment it runs (so the Console proves the bootstrap happened).
+    ///   1. It logs the moment it runs (so the Console proves the bootstrap happened), as a yellow WARNING
+    ///      so the Console's info filter can't hide it, and says if the Input System is switched off.
     ///   2. It ALWAYS creates the debug object, straight away, and keeps it alive across scene reloads
     ///      (DontDestroyOnLoad), whatever the scene contains.
     ///   3. The debug object itself (CameraDebugHost) looks for the camera every frame until it finds it,
@@ -33,21 +34,43 @@ namespace KnightSurvivors.Cameras
             CameraDebugHost.Instance = null;
         }
 
+        // Runs at the start of EVERY Play session, before the first scene loads, whatever the scene
+        // contains and whatever the input settings are. It only writes to the Console, so nothing can
+        // stop it. If you press Play and don't see this line, Unity is not running these scripts.
+        //
+        // LogWarning (yellow) instead of Log (grey) ON PURPOSE: the Console has three filter buttons in
+        // its top-right corner (grey speech bubble = info, yellow triangle = warnings, red = errors).
+        // If the grey one is switched off, every Debug.Log line is hidden while warnings still show.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void AnnounceAndCheckInput()
+        {
+            Debug.LogWarning("[TEMP DEBUG] CameraDebugBootstrap running, build " + CameraJitterReadout.BuildStamp +
+                             ". Active Input Handling: " + DebugKeys.ActiveInputHandling +
+                             ". (Camera diagnostics: readout ON by default, F3 hides it, F2 switches follow mode.)");
+
+            // All gameplay input (PlayerInput / PlayerInputHandler, level-up keys) uses the Input System
+            // package. If it's switched off, the game gets no keyboard/gamepad at all, so shout about it.
+            if (!DebugKeys.InputSystemEnabled)
+            {
+                Debug.LogError("[Knight Survivors] The Input System is switched OFF for this project, so the knight " +
+                               "can't be controlled. Fix: " + DebugKeys.FixHint);
+            }
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            Debug.Log("[TEMP DEBUG] CameraDebugBootstrap running, build " + CameraJitterReadout.BuildStamp +
-                      " (camera diagnostics: readout ON by default, F3 hides it, F2 switches follow mode).");
             if (installed != null) return; // Unity's == null is also true for a destroyed object
 
             // AfterSceneLoad runs after the scene objects' Awake/OnEnable, so if the scene builder already
             // put a CameraDebugHost on "Systems", it has registered itself by now and we're not needed.
             if (CameraDebugHost.Instance != null)
             {
-                Debug.Log("[TEMP DEBUG] Camera diagnostics found in the scene on '" + CameraDebugHost.Instance.name + "'.");
+                Debug.LogWarning("[TEMP DEBUG] Camera diagnostics found in the scene on '" + CameraDebugHost.Instance.name + "'.");
                 return;
             }
 
+            Debug.LogWarning("[TEMP DEBUG] No camera diagnostics in this scene (old scene?), adding TEMP_CameraDebug.");
             installed = new GameObject("TEMP_CameraDebug");
             Object.DontDestroyOnLoad(installed);
             installed.AddComponent<CameraDebugHost>();
@@ -129,7 +152,7 @@ namespace KnightSurvivors.Cameras
             if (!loggedWired)
             {
                 loggedWired = true;
-                Debug.Log($"[TEMP DEBUG] Camera diagnostics wired to '{cam.name}' (vcam: {(vcam != null ? vcam.name : "none")}).");
+                Debug.LogWarning($"[TEMP DEBUG] Camera diagnostics wired to '{cam.name}' (vcam: {(vcam != null ? vcam.name : "none")}).");
             }
         }
     }
