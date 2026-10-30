@@ -84,6 +84,8 @@ namespace KnightSurvivors.Enemies
             Health.bodyRadius = Radius; // melee weapons use it for their reach check
             simPosition = position;
             previousPosition = position;
+            // Weapons read Health.SimulatedPosition for hit tests (not the smoothed transform).
+            Health.SimulatedPosition = position;
             velocity = Vector3.zero;
             knockbackVelocity = Vector3.zero;
             knockbackTimeLeft = 0f;

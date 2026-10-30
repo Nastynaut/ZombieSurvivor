@@ -230,6 +230,9 @@ namespace KnightSurvivors.Enemies
                         e.previousPosition = p;
                     }
                 }
+
+                // Keep Health's gameplay position in sync so melee (LongswordWeapon) hits the sim body.
+                e.Health.SimulatedPosition = e.simPosition;
             }
 
             UpdateCorpses(dt);
