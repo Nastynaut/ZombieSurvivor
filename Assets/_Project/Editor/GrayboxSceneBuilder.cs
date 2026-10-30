@@ -374,6 +374,27 @@ namespace KnightSurvivors.EditorTools
             check.brain = brain;
             check.virtualCamera = vcam;
             systems.AddComponent<CameraDebugHost>(); // re-wires after reloads, stops the bootstrap duplicating
+
+            // Check our own work, loudly. Every type above is a direct, typed reference (no lookups by name,
+            // no reflection), so if the Cameras assembly didn't compile, this builder wouldn't compile either.
+            // Still, count what is really on the objects now and name anything missing in red.
+            int attached = 0;
+            attached += CountOrComplain<CameraShakeDebugToggle>(systems);
+            attached += CountOrComplain<CameraJitterReadout>(systems);
+            attached += CountOrComplain<CameraFollowModeToggle>(systems);
+            attached += CountOrComplain<CameraRigSelfCheck>(systems);
+            attached += CountOrComplain<CameraDebugHost>(systems);
+            attached += CountOrComplain<SimpleIsoFollow>(brain.gameObject);
+            Debug.LogWarning("[Knight Survivors] Diagnostics attached: " + attached + " components (expected 6), build " +
+                             CameraJitterReadout.BuildStamp + ".");
+        }
+
+        // 1 if the object has a T, otherwise a red error naming the missing component and 0.
+        private static int CountOrComplain<T>(GameObject go) where T : Component
+        {
+            if (go.GetComponent<T>() != null) return 1;
+            Debug.LogError("[Knight Survivors] Diagnostics component MISSING: " + typeof(T).Name + " on '" + go.name + "'.");
+            return 0;
         }
 
         // ------------------------------------------------------------------ UI
