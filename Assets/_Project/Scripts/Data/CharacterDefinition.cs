@@ -13,9 +13,10 @@ namespace KnightSurvivors.Data
     /// weapon + a name for the menu + how it is unlocked. Adding Brother Cuthbert later (GDD 12) is
     /// "duplicate this asset, point it at other stats / weapon / prefab" with zero code changes.
     ///
-    /// SWAPPING ART: <see cref="prefab"/> points at PF_PH_Knight (logic root + placeholder 'Visual'
-    /// child). When real art arrives, make a Prefab Variant with the new Visual and point this field
-    /// at it. That's a data change, not a code change (PlaceholderSpec 7.1).
+    /// SWAPPING ART: <see cref="prefab"/> points at PF_PH_Knight (logic root + 'Visual' child).
+    /// <see cref="visualModel"/> holds the art FBX (Sir Aldric Tripo pilot). The builder parents it
+    /// under Visual/ModelOffset with axis/scale/pivot fixes. Null visualModel → primitive placeholder.
+    /// Later: Prefab Variant with a polished Visual, then point prefab at it (PlaceholderSpec 7.1).
     /// </summary>
     [CreateAssetMenu(menuName = "Knight Survivors/Character Definition", fileName = "CHR_NewCharacter")]
     public class CharacterDefinition : ScriptableObject
@@ -33,6 +34,11 @@ namespace KnightSurvivors.Data
 
         [Tooltip("The player prefab that spawns: logic root (PlayerController etc.) + swappable 'Visual' child.")]
         public GameObject prefab;
+
+        [Tooltip(
+            "Optional art model (FBX / prefab) the graybox builder parents under Visual/ModelOffset. " +
+            "Null = keep the primitive placeholder body. CHR_SirAldric points at SirAldric.fbx.")]
+        public GameObject visualModel;
 
         [Tooltip("Base stats (GDD 9.11 PlayerStats).")]
         public PlayerStats baseStats;

@@ -89,6 +89,9 @@ namespace KnightSurvivors.EditorTools
             knight.id = "sir_aldric";
             knight.displayName = "Sir Aldric";
             knight.prefab = knightPrefab;
+            // Art reference lives on the ScriptableObject (project rule). Builder also loads this path
+            // via AssetDatabase when wiring Visual/ModelOffset; null → primitive placeholder.
+            knight.visualModel = AssetDatabase.LoadAssetAtPath<GameObject>(PlaceholderFactory.SirAldricFbxPath);
             knight.baseStats = stats;
             knight.startingWeapon = sword;
             knight.unlockedByDefault = true;
