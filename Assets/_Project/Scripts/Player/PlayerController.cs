@@ -63,6 +63,10 @@ namespace KnightSurvivors.Player
         private Color hurtColor = new Color32(0xE2, 0x3A, 0x3A, 0xFF);
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
+        // Resting local rotation of the visual (before any death tip). Remembered so the death pose is
+        // always "tip from upright", not "tip from whatever mid-interpolation pose we happen to be in".
+        private Quaternion visualBaseLocalRotation = Quaternion.identity;
+
         private void Awake()
         {
             Health = GetComponent<Health>();
@@ -75,6 +79,9 @@ namespace KnightSurvivors.Player
             Health.team = Team.Player;
             Health.Damaged += OnDamaged;
             Health.Died += OnHealthDied;
+
+            if (binder != null && binder.visualRoot != null)
+                visualBaseLocalRotation = binder.visualRoot.localRotation;
 
             EnsureSmoothedCameraTarget();
         }
@@ -246,10 +253,19 @@ namespace KnightSurvivors.Player
             SetHurtTint(false);
 
             // Graybox "death": tip the knight over. A real death animation comes with the art pass.
+            //
+            // WHY Snap + tip from the RESTING base (not the current localRotation):
+            // TickInterpolator every frame places the visual part-way between the last two root poses.
+            // If we tip whatever mid-lerp localRotation we have and leave the interpolator's history
+            // alone, the root's remaining yaw lerp keeps spinning the tipped model (yaw drift).
+            // Baking the tip onto the resting base and Snap()-ing clears that history so the pose stays put.
             if (binder != null && binder.visualRoot != null)
             {
-                binder.visualRoot.localRotation = Quaternion.Euler(90f, 0f, 0f) * binder.visualRoot.localRotation;
+                binder.visualRoot.localRotation = Quaternion.Euler(90f, 0f, 0f) * visualBaseLocalRotation;
             }
+
+            var interpolator = GetComponent<TickInterpolator>();
+            if (interpolator != null) interpolator.Snap();
 
             Died?.Invoke(this);
             PlayerRegistry.NotifyDied(this);
