@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7494a54e6d337e49a4ffbd2f512e7c0, type: 3}
+  m_Name: WPN_Longsword
+  m_EditorClassIdentifier: KnightSurvivors.Data::KnightSurvivors.Data.WeaponDefinition
+  id: longsword
+  displayName: Longsword
+  icon: {fileID: 0}
+  archetype: 0
+  targetingMode: 0
+  damageType: 0
+  arcDegrees: 120
+  projectileSpeed: 0
+  range: 6
+  hitInterval: 0.5
+  maxLevel: 8
+  levels:
+  - level: 1
+    damage: 12
+    cooldown: 1.2
+    area: 2.8
+    amount: 1
+    pierce: -1
+    duration: 0.2
+    knockback: 6
+    description: Slash in front
+  - level: 2
+    damage: 15
+    cooldown: 1.2
+    area: 2.8
+    amount: 1
+    pierce: -1
+    duration: 0.2
+    knockback: 6
+    description: +3 damage
+  - level: 3
+    damage: 15
+    cooldown: 1.1
+    area: 3.1
+    amount: 1
+    pierce: -1
+    duration: 0.2
+    knockback: 6
+    description: Faster, wider
+  - level: 4
+    damage: 19
+    cooldown: 1.1
+    area: 3.1
+    amount: 2
+    pierce: -1
+    duration: 0.2
+    knockback: 6
+    description: Rear slash
+  - level: 5
+    damage: 19
+    cooldown: 1
+    area: 3.4
+    amount: 2
+    pierce: -1
+    duration: 0.2
+    knockback: 7
+    description: Faster, wider
+  - level: 6
+    damage: 24
+    cooldown: 1
+    area: 3.4
+    amount: 2
+    pierce: -1
+    duration: 0.2
+    knockback: 7
+    description: +5 damage
+  - level: 7
+    damage: 24
+    cooldown: 0.9
+    area: 3.7
+    amount: 2
+    pierce: -1
+    duration: 0.2
+    knockback: 7
+    description: Faster, wider
+  - level: 8
+    damage: 30
+    cooldown: 0.9
+    area: 3.7
+    amount: 3
+    pierce: -1
+    duration: 0.2
+    knockback: 8
+    description: Side slashes (max, can evolve)
+  isEvolution: 0
+  prefab: {fileID: 7047523337033422460, guid: e61b994bd49525e44baec9dd507b5e46, type: 3}
+  hitSfx: []
