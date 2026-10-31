@@ -78,12 +78,14 @@ namespace KnightSurvivors.Enemies
             bool bossTrickle = Schedule.bossMinute > 0f && run.ElapsedMinutes >= Schedule.bossMinute;
             int spawnCap = bossTrickle ? targetAlive : hardCap;
 
-            // Enrage (20:00): replace the minute-15 rate with enrageSpawnRatePerSec when the boss is set.
-            // The minute-15 row's targetAlive (40) and Shambler mix stay as written in the schedule.
+            // Enrage (20:00 / DataTables §4.2): after enrageTimeSeconds, IF the schedule boss is still
+            // alive, replace the minute-15 rate with enrageSpawnRatePerSec. targetAlive 40 and the
+            // Shambler mix stay as written. No boss (slice) or a dead boss → keep the normal rate.
             float baseRate = entry.spawnRatePerSec;
             if (Schedule.enrageTimeSeconds > 0f
                 && run.elapsedTime >= Schedule.enrageTimeSeconds
-                && Schedule.enrageSpawnRatePerSec > 0f)
+                && Schedule.enrageSpawnRatePerSec > 0f
+                && IsScheduleBossAlive())
             {
                 baseRate = Schedule.enrageSpawnRatePerSec;
             }
@@ -108,6 +110,24 @@ namespace KnightSurvivors.Enemies
                 if (!TryGetSpawnPoint(out Vector3 point)) break;
                 enemies.Spawn(def, point, minute);
             }
+        }
+
+        /// <summary>
+        /// True when the schedule's boss definition has at least one living instance.
+        /// Used so enrage (DataTables §4.2) only fires while the boss is alive.
+        /// </summary>
+        private bool IsScheduleBossAlive()
+        {
+            if (Schedule == null || Schedule.boss == null || enemies == null) return false;
+            var alive = enemies.Alive;
+            for (int i = 0; i < alive.Count; i++)
+            {
+                var e = alive[i];
+                if (e == null || e.Definition != Schedule.boss) continue;
+                if (e.Health != null && e.Health.IsDead) continue;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Weighted pick from the minute's mix, skipping types that aren't allowed yet (firstMinute).</summary>
