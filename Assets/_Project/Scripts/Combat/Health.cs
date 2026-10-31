@@ -46,7 +46,8 @@ namespace KnightSurvivors.Combat
         /// WHY THIS EXISTS: zombies are drawn with a smoothed transform (part-way between the last two
         /// 50 Hz ticks), but weapons fire on the tick and must test against where the zombie IS in the
         /// simulation, not where its model is drawn this frame. EnemyManager writes this every tick from
-        /// <c>Enemy.simPosition</c>. Players leave it alone; it stays equal to <see cref="Transform.position"/>.
+        /// <c>Enemy.simPosition</c>. Players sync it each FixedUpdate from the motor root
+        /// (<see cref="Transform.position"/>) so enemy contact / hit tests stay on the tick pose.
         /// </summary>
         public Vector3 SimulatedPosition { get; set; }
 

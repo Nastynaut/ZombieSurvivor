@@ -26,9 +26,13 @@ namespace KnightSurvivors.Data
         public int skipCrowns = 3;
         [Tooltip("Skip heals this fraction of max HP (0.05 = 5%).")]
         public float skipHealPct = 0.05f;
-        [Tooltip("Cards offered when nothing else can be upgraded.")]
-        public List<PickupType> fallbackCards = new List<PickupType> { PickupType.RoastChicken, PickupType.CoinPouch };
+        [Tooltip("Cards offered when nothing else can be upgraded. Order matches GDD: Gold Pouch then Roast Chicken.")]
+        public List<PickupType> fallbackCards = new List<PickupType> { PickupType.CoinPouch, PickupType.RoastChicken };
         [Tooltip("Chest rolls 1 / 3 / 5 upgrades with these chances. Not used yet.")]
         public float[] chestRollChances = { 0.75f, 0.20f, 0.05f };
+        [Tooltip("How long the chest auto-spin animation lasts, in seconds (GDD 4.3 / DataTables §0.1).")]
+        public float chestSpinSeconds = 1.5f;
+        [Tooltip("Rerolls granted when a chest is opened (+1). Does NOT grant skips (DataTables §0.1).")]
+        public int rerollPerChest = 1;
     }
 }

@@ -43,6 +43,8 @@ namespace KnightSurvivors.Data
         public int revivals = 0;
         public int rerolls = 2;
         public int banishes = 1;
+        [Tooltip("Level-up Skip uses left this run (GDD 3.1 / DataTables §0.1). Base 3; meta_skip adds +1 per rank (max 5).")]
+        public int skips = 3;
         [Tooltip("Dodge roll (NOT implemented in the graybox yet).")]
         public float dodgeDistance = 4f;
         public float dodgeDuration = 0.3f;
@@ -78,7 +80,8 @@ namespace KnightSurvivors.Data
                 greed = greed,
                 revivals = revivals,
                 rerolls = rerolls,
-                banishes = banishes
+                banishes = banishes,
+                skips = skips
             };
         }
     }
