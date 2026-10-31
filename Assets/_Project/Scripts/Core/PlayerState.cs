@@ -29,6 +29,12 @@ namespace KnightSurvivors.Core
         /// <summary>Level-up options left this run (GDD 3.1). Reroll/banish UI comes later.</summary>
         public int rerollsLeft;
         public int banishesLeft;
+        /// <summary>
+        /// Level-up Skip uses left this run (DataTables §0.1 / GDD 3.1).
+        /// Starts at RuntimeStats.skips (base 3 + meta_skip). Each level-up Skip spends 1.
+        /// Chest spin dismiss does NOT spend a skip (chest UI not built yet — keep that rule when it lands).
+        /// </summary>
+        public int skipsLeft;
 
         /// <summary>The current, upgraded stats (base + character bonus + passives).</summary>
         public RuntimeStats stats = new RuntimeStats();

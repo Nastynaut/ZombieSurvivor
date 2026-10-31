@@ -180,6 +180,8 @@ namespace KnightSurvivors.Player
             Loadout.Initialize(this, character);
             State.rerollsLeft = State.stats.rerolls;
             State.banishesLeft = State.stats.banishes;
+            // Skips start at the runtime stat (base 3 + any meta_skip ranks already applied).
+            State.skipsLeft = State.stats.skips;
             Health.ResetHealth(State.stats.maxHealth);
             Health.armor = State.stats.armor;
             State.currentHealth = Health.CurrentHealth;

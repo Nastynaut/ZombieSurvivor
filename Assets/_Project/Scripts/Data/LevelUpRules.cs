@@ -34,5 +34,7 @@ namespace KnightSurvivors.Data
         public float chestSpinSeconds = 1.5f;
         [Tooltip("Rerolls granted when a chest is opened (+1). Does NOT grant skips (DataTables §0.1).")]
         public int rerollPerChest = 1;
+        // NOTE (DataTables §0.1 / GDD 4.3): dismissing a chest's auto-spin costs NO skip.
+        // When chest UI is built, its dismiss path must NOT call LevelUpService.Skip().
     }
 }
