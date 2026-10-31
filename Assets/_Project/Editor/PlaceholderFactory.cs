@@ -1,7 +1,6 @@
 using System.IO;
 using KnightSurvivors.Combat;
 using KnightSurvivors.Core;
-using KnightSurvivors.Data;
 using KnightSurvivors.Enemies;
 using KnightSurvivors.Pickups;
 using KnightSurvivors.Player;
@@ -29,13 +28,6 @@ namespace KnightSurvivors.EditorTools
         public const string MaterialsDir = Root + "/Materials";
         public const string PrefabsDir = Root + "/Prefabs";
         public const string VfxDir = Root + "/VFX";
-
-        // Tripo pilot FBX for Sir Aldric (Dustin-approved). Do NOT point at SirAldric_attempt1.fbx.
-        // No hand-made .meta: Unity generates import settings on Dustin's machine.
-        public const string SirAldricFbxPath = "Assets/Art/Characters/SirAldric/SirAldric.fbx";
-
-        // Target knight height in meters (matches CharacterController height / PlaceholderSpec).
-        public const float KnightTargetHeightM = 1.8f;
 
         // URP shader names. Shader.Find works in the Editor even before the pipeline is switched on.
         private const string LitShader = "Universal Render Pipeline/Lit";
@@ -263,7 +255,7 @@ namespace KnightSurvivors.EditorTools
 
         // ------------------------------------------------------------------ knight (PlaceholderSpec 2.1)
 
-        public static GameObject BuildKnight(Materials m, InputActionAsset actions, CharacterDefinition character)
+        public static GameObject BuildKnight(Materials m, InputActionAsset actions)
         {
             var root = new GameObject("PF_PH_Knight");
             var p1Primary = m.teamPrimary[0];
@@ -277,36 +269,32 @@ namespace KnightSurvivors.EditorTools
             cc.stepOffset = 0.3f;
             cc.skinWidth = 0.03f;
 
-            // Visual: swappable art root. Real FBX goes under Visual/ModelOffset; primitives are the fallback.
+            // Visual: everything that gets swapped for the Synty model later.
             var visual = Empty("Visual", root.transform, Vector3.zero);
+            var body = Prim(PrimitiveType.Capsule, "Body", visual, new Vector3(0, 0.90f, 0), Vector3.zero, new Vector3(0.70f, 0.90f, 0.70f), m.knightSteel, true);
+            var tabard = Prim(PrimitiveType.Cube, "Tabard", visual, new Vector3(0, 0.85f, 0.30f), Vector3.zero, new Vector3(0.50f, 0.70f, 0.12f), p1Primary, true);
+            var belt = Prim(PrimitiveType.Cube, "Belt", visual, new Vector3(0, 0.75f, 0), Vector3.zero, new Vector3(0.74f, 0.10f, 0.74f), m.knightDark, true);
+            var helmet = Prim(PrimitiveType.Sphere, "Helmet", visual, new Vector3(0, 1.62f, 0), Vector3.zero, Vector3.one * 0.42f, m.knightSteel, true);
+            var visor = Prim(PrimitiveType.Cube, "Visor", helmet.transform, new Vector3(0, 0.02f, 0.45f), Vector3.zero, new Vector3(0.70f, 0.12f, 0.15f), m.knightDark, true);
+            var plume = Prim(PrimitiveType.Cube, "Plume", helmet.transform, new Vector3(0, 0.65f, -0.15f), new Vector3(-20f, 0, 0), new Vector3(0.15f, 0.70f, 0.45f), p1Primary, true);
+            var pauldronL = Prim(PrimitiveType.Sphere, "Pauldron_L", visual, new Vector3(-0.42f, 1.40f, 0), Vector3.zero, new Vector3(0.34f, 0.24f, 0.34f), m.knightSteel, true);
+            var bandL = Prim(PrimitiveType.Cube, "Band", pauldronL.transform, new Vector3(0, -0.1f, 0), Vector3.zero, new Vector3(1.05f, 0.25f, 1.05f), p1Secondary, true);
+            var pauldronR = Prim(PrimitiveType.Sphere, "Pauldron_R", visual, new Vector3(0.42f, 1.40f, 0), Vector3.zero, new Vector3(0.34f, 0.24f, 0.34f), m.knightSteel, true);
+            var bandR = Prim(PrimitiveType.Cube, "Band", pauldronR.transform, new Vector3(0, -0.1f, 0), Vector3.zero, new Vector3(1.05f, 0.25f, 1.05f), p1Secondary, true);
 
-            // Art comes from CharacterDefinition.visualModel (wired by GameDataFactory.EnsureSirAldricArtRefs).
-            // Null / missing → old capsule knight so the graybox still runs.
-            Renderer[] bodyRenderers;
-            Renderer[] teamPrimaryRenderers;
-            Renderer[] teamSecondaryRenderers;
-            Renderer weaponRenderer;
-            Transform socketWeapon;
+            // Shield: "rot (0,0,90) then (0,-20,0)" = first stand the disc up, then turn it 20 degrees.
+            var shield = Prim(PrimitiveType.Cylinder, "Shield", visual, new Vector3(-0.48f, 1.00f, 0.18f), Vector3.zero, new Vector3(0.60f, 0.04f, 0.60f), p1Primary, true);
+            shield.transform.localRotation = Quaternion.Euler(0f, -20f, 0f) * Quaternion.Euler(0f, 0f, 90f);
+            var crossV = Prim(PrimitiveType.Cube, "Cross_V", shield.transform, new Vector3(0, 1.2f, 0), Vector3.zero, new Vector3(0.18f, 0.5f, 0.9f), p1Secondary, true);
+            var crossH = Prim(PrimitiveType.Cube, "Cross_H", shield.transform, new Vector3(0, 1.2f, 0), Vector3.zero, new Vector3(0.9f, 0.5f, 0.18f), p1Secondary, true);
 
-            bool usedFbx = TryAttachSirAldricModel(visual, character, out bodyRenderers);
-            if (usedFbx)
-            {
-                // Tripo pilot has no separate tabard / plume / shield meshes for team tint yet.
-                // KnightTint still colours the ground ring. Hit flash uses every mesh renderer.
-                teamPrimaryRenderers = new Renderer[0];
-                teamSecondaryRenderers = new Renderer[0];
-                weaponRenderer = null;
-                // Keep a weapon socket at roughly hand height so VisualBinder stays filled.
-                socketWeapon = Empty("Socket_WeaponR", visual, new Vector3(0.40f, 1.00f, 0.25f), new Vector3(75f, 0, 0));
-            }
-            else
-            {
-                BuildKnightPrimitiveVisual(visual, m, p1Primary, p1Secondary,
-                    out bodyRenderers, out teamPrimaryRenderers, out teamSecondaryRenderers,
-                    out weaponRenderer, out socketWeapon);
-            }
+            var socketWeapon = Empty("Socket_WeaponR", visual, new Vector3(0.40f, 1.00f, 0.25f), new Vector3(75f, 0, 0));
+            var sword = Empty("Sword", socketWeapon, Vector3.zero);
+            var grip = Prim(PrimitiveType.Cylinder, "Grip", sword, Vector3.zero, Vector3.zero, new Vector3(0.05f, 0.10f, 0.05f), m.knightDark, true);
+            var guard = Prim(PrimitiveType.Cube, "Guard", sword, new Vector3(0, 0.11f, 0), Vector3.zero, new Vector3(0.28f, 0.04f, 0.06f), m.knightSteel, true);
+            var blade = Prim(PrimitiveType.Cube, "Blade", sword, new Vector3(0, 0.66f, 0), Vector3.zero, new Vector3(0.09f, 1.05f, 0.025f), m.swordBlade, true);
 
-            // Ground ring: outside Visual so death tip / future anims never tilt it.
+            // Ground ring: outside Visual so animations never tilt it.
             var ring = Empty("GroundRing", root.transform, new Vector3(0, 0.02f, 0));
             var disc = Prim(PrimitiveType.Cylinder, "Disc", ring, Vector3.zero, Vector3.zero, new Vector3(1.50f, 0.005f, 1.50f), m.ring[0], false);
             var arrow = Prim(PrimitiveType.Cube, "FacingArrow", ring, new Vector3(0, 0, 0.95f), new Vector3(0, 45f, 0), new Vector3(0.30f, 0.01f, 0.30f), m.ring[0], false);
@@ -329,10 +317,14 @@ namespace KnightSurvivors.EditorTools
 
             var binder = root.AddComponent<VisualBinder>();
             binder.visualRoot = visual;
-            binder.bodyRenderers = bodyRenderers;
-            binder.teamPrimaryRenderers = teamPrimaryRenderers;
-            binder.teamSecondaryRenderers = teamSecondaryRenderers;
-            binder.weaponRenderer = weaponRenderer;
+            // Body renderers = what flashes when hurt. NOT the team-colour pieces or the ring (spec 2.5).
+            binder.bodyRenderers = new Renderer[]
+            {
+                R(body), R(belt), R(helmet), R(visor), R(pauldronL), R(pauldronR), R(grip), R(guard), R(blade)
+            };
+            binder.teamPrimaryRenderers = new Renderer[] { R(tabard), R(plume), R(shield) };
+            binder.teamSecondaryRenderers = new Renderer[] { R(bandL), R(bandR), R(crossV), R(crossH) };
+            binder.weaponRenderer = R(blade);
             binder.weaponSocket = socketWeapon;
             binder.hitSocket = socketHit;
             binder.overheadSocket = socketOverhead;
@@ -356,197 +348,6 @@ namespace KnightSurvivors.EditorTools
             player.cameraTarget = cameraTarget;
 
             return SavePrefab(root, PrefabsDir + "/PF_PH_Knight.prefab");
-        }
-
-        /// <summary>
-        /// Old capsule / box knight (PlaceholderSpec 2.1). Used when SirAldric.fbx is not in the project yet.
-        /// </summary>
-        private static void BuildKnightPrimitiveVisual(
-            Transform visual, Materials m, Material p1Primary, Material p1Secondary,
-            out Renderer[] bodyRenderers, out Renderer[] teamPrimaryRenderers,
-            out Renderer[] teamSecondaryRenderers, out Renderer weaponRenderer, out Transform socketWeapon)
-        {
-            var body = Prim(PrimitiveType.Capsule, "Body", visual, new Vector3(0, 0.90f, 0), Vector3.zero, new Vector3(0.70f, 0.90f, 0.70f), m.knightSteel, true);
-            var tabard = Prim(PrimitiveType.Cube, "Tabard", visual, new Vector3(0, 0.85f, 0.30f), Vector3.zero, new Vector3(0.50f, 0.70f, 0.12f), p1Primary, true);
-            var belt = Prim(PrimitiveType.Cube, "Belt", visual, new Vector3(0, 0.75f, 0), Vector3.zero, new Vector3(0.74f, 0.10f, 0.74f), m.knightDark, true);
-            var helmet = Prim(PrimitiveType.Sphere, "Helmet", visual, new Vector3(0, 1.62f, 0), Vector3.zero, Vector3.one * 0.42f, m.knightSteel, true);
-            var visor = Prim(PrimitiveType.Cube, "Visor", helmet.transform, new Vector3(0, 0.02f, 0.45f), Vector3.zero, new Vector3(0.70f, 0.12f, 0.15f), m.knightDark, true);
-            var plume = Prim(PrimitiveType.Cube, "Plume", helmet.transform, new Vector3(0, 0.65f, -0.15f), new Vector3(-20f, 0, 0), new Vector3(0.15f, 0.70f, 0.45f), p1Primary, true);
-            var pauldronL = Prim(PrimitiveType.Sphere, "Pauldron_L", visual, new Vector3(-0.42f, 1.40f, 0), Vector3.zero, new Vector3(0.34f, 0.24f, 0.34f), m.knightSteel, true);
-            var bandL = Prim(PrimitiveType.Cube, "Band", pauldronL.transform, new Vector3(0, -0.1f, 0), Vector3.zero, new Vector3(1.05f, 0.25f, 1.05f), p1Secondary, true);
-            var pauldronR = Prim(PrimitiveType.Sphere, "Pauldron_R", visual, new Vector3(0.42f, 1.40f, 0), Vector3.zero, new Vector3(0.34f, 0.24f, 0.34f), m.knightSteel, true);
-            var bandR = Prim(PrimitiveType.Cube, "Band", pauldronR.transform, new Vector3(0, -0.1f, 0), Vector3.zero, new Vector3(1.05f, 0.25f, 1.05f), p1Secondary, true);
-
-            // Shield: "rot (0,0,90) then (0,-20,0)" = first stand the disc up, then turn it 20 degrees.
-            var shield = Prim(PrimitiveType.Cylinder, "Shield", visual, new Vector3(-0.48f, 1.00f, 0.18f), Vector3.zero, new Vector3(0.60f, 0.04f, 0.60f), p1Primary, true);
-            shield.transform.localRotation = Quaternion.Euler(0f, -20f, 0f) * Quaternion.Euler(0f, 0f, 90f);
-            var crossV = Prim(PrimitiveType.Cube, "Cross_V", shield.transform, new Vector3(0, 1.2f, 0), Vector3.zero, new Vector3(0.18f, 0.5f, 0.9f), p1Secondary, true);
-            var crossH = Prim(PrimitiveType.Cube, "Cross_H", shield.transform, new Vector3(0, 1.2f, 0), Vector3.zero, new Vector3(0.9f, 0.5f, 0.18f), p1Secondary, true);
-
-            socketWeapon = Empty("Socket_WeaponR", visual, new Vector3(0.40f, 1.00f, 0.25f), new Vector3(75f, 0, 0));
-            var sword = Empty("Sword", socketWeapon, Vector3.zero);
-            var grip = Prim(PrimitiveType.Cylinder, "Grip", sword, Vector3.zero, Vector3.zero, new Vector3(0.05f, 0.10f, 0.05f), m.knightDark, true);
-            var guard = Prim(PrimitiveType.Cube, "Guard", sword, new Vector3(0, 0.11f, 0), Vector3.zero, new Vector3(0.28f, 0.04f, 0.06f), m.knightSteel, true);
-            var blade = Prim(PrimitiveType.Cube, "Blade", sword, new Vector3(0, 0.66f, 0), Vector3.zero, new Vector3(0.09f, 1.05f, 0.025f), m.swordBlade, true);
-
-            // Body renderers = what flashes when hurt. NOT the team-colour pieces or the ring (spec 2.5).
-            bodyRenderers = new Renderer[]
-            {
-                R(body), R(belt), R(helmet), R(visor), R(pauldronL), R(pauldronR), R(grip), R(guard), R(blade)
-            };
-            teamPrimaryRenderers = new Renderer[] { R(tabard), R(plume), R(shield) };
-            teamSecondaryRenderers = new Renderer[] { R(bandL), R(bandR), R(crossV), R(crossH) };
-            weaponRenderer = R(blade);
-        }
-
-        /// <summary>
-        /// Parent <see cref="CharacterDefinition.visualModel"/> under Visual/ModelOffset with
-        /// Z-up→Y-up, yaw, ~1.8 m height, feet at y=0. Returns false if visualModel is null.
-        ///
-        /// WHY ModelOffset (not .meta)?
-        /// Dustin lets Unity generate .meta files — we must NOT hand-write FBX import settings.
-        /// So axis / scale / pivot / yaw fixes live on this empty (+ <see cref="ModelOffsetYaw"/>).
-        ///
-        /// FBX facts (parsed from the binary file, Vertices + GlobalSettings):
-        ///   UpAxis metadata = Y (1), but mesh height is along Z (~0.998 m), feet at Z=-0.5 (centered pivot).
-        ///   UnitScaleFactor = 1.0 (Autodesk cm convention). Vertex numbers are ~1 m already, so Unity's
-        ///   default "Convert Units" makes the mesh ~100× too small — we fix that by measuring bounds
-        ///   AFTER instantiate and scaling to KnightTargetHeightM (that automatically eats the 100×).
-        ///
-        /// Facing (vertex asymmetry): denser verts on -Y ≈ shield arm = character's LEFT ⇒ file front is -X.
-        /// Up-fix alone is Rx(-90): (x,y,z)→(x,z,-y); file -X stays -X. Yaw +90° around Y then maps
-        /// -X → +Z (Unity forward / move direction). Old combined Euler(-90,180,0) = Ry(180)*Rx(-90)
-        /// mapped -X → +X, so the facing indicator sat on the knight's LEFT (Dustin playtest).
-        /// Default visualModelYawOffset = 90 (= -90 relative to that old 180).
-        /// </summary>
-        private static bool TryAttachSirAldricModel(
-            Transform visual, CharacterDefinition character, out Renderer[] bodyRenderers)
-        {
-            bodyRenderers = null;
-
-            // Source of truth: CharacterDefinition.visualModel (no hardcoded path in the attach path).
-            GameObject modelAsset = character != null ? character.visualModel : null;
-            if (modelAsset == null)
-            {
-                Debug.LogWarning("[Knight Survivors] CharacterDefinition.visualModel is null — " +
-                                 "using primitive placeholder knight. Assign SirAldric.fbx on CHR_SirAldric " +
-                                 "(GameDataFactory does this on Build Graybox Scene).");
-                return false;
-            }
-
-            float yawDegrees = character != null ? character.visualModelYawOffset : 90f;
-
-            // Intermediate offset: Visual stays at identity (death tip / facing use it); fixes go here.
-            var modelOffset = Empty("ModelOffset", visual, Vector3.zero);
-            modelOffset.localScale = Vector3.one;
-            modelOffset.localPosition = Vector3.zero;
-
-            // ModelOffsetYaw: Rx(-90) first, then yaw around Y. Live-tweakable on the prefab;
-            // CHR_SirAldric.visualModelYawOffset is the rebuild source of truth.
-            var yawComp = modelOffset.gameObject.AddComponent<ModelOffsetYaw>();
-            yawComp.upAxisEulerDegrees = new Vector3(-90f, 0f, 0f);
-            yawComp.yawOffsetDegrees = yawDegrees;
-            yawComp.Apply();
-
-            // Object.Instantiate (not PrefabUtility.InstantiatePrefab): the FBX is baked into
-            // PF_PH_Knight by SaveAsPrefabAsset below, so we don't need a live prefab link.
-            var instance = Object.Instantiate(modelAsset, modelOffset);
-            instance.name = "SirAldric";
-            instance.transform.localPosition = Vector3.zero;
-            instance.transform.localRotation = Quaternion.identity;
-            instance.transform.localScale = Vector3.one;
-
-            // Prefab rule: Visual children must not fight the root CharacterController / our own anim.
-            // Strip Animator (imported FBX often has one), Rigidbody, and Collider under Visual.
-            foreach (var anim in instance.GetComponentsInChildren<Animator>(true))
-                Object.DestroyImmediate(anim);
-            foreach (var rb in instance.GetComponentsInChildren<Rigidbody>(true))
-                Object.DestroyImmediate(rb);
-            foreach (var col in instance.GetComponentsInChildren<Collider>(true))
-                Object.DestroyImmediate(col);
-
-            // Avoid pink materials: Tripo often ships Built-in/Standard shaders; project is URP.
-            UpgradeImportedMaterialsToUrpLit(instance);
-
-            // Measure mesh bounds in WORLD space (Visual is at origin while we build the prefab).
-            Bounds b = EncapsulateRendererBounds(instance);
-            if (b.size.y < 0.0001f)
-            {
-                Debug.LogWarning("[Knight Survivors] Sir Aldric bounds look empty — using primitive placeholder.");
-                Object.DestroyImmediate(modelOffset.gameObject);
-                bodyRenderers = null;
-                return false;
-            }
-
-            // Scale so standing height ≈ 1.8 m. If Convert Units shrunk the mesh 100×, this scale is ~180.
-            float scale = KnightTargetHeightM / b.size.y;
-            modelOffset.localScale = Vector3.one * scale;
-
-            // Re-measure after scale; lift so the lowest point sits on y=0 (feet at the pivot).
-            b = EncapsulateRendererBounds(instance);
-            modelOffset.localPosition = new Vector3(0f, -b.min.y, 0f);
-
-            bodyRenderers = instance.GetComponentsInChildren<Renderer>(true);
-            Debug.Log("[Knight Survivors] Sir Aldric visualModel attached under Visual/ModelOffset. " +
-                      "yaw=" + yawDegrees.ToString("F1") +
-                      " preScaleHeight=" + (KnightTargetHeightM / scale).ToString("F4") +
-                      "m scale=" + scale.ToString("F3") +
-                      " yOffset=" + modelOffset.localPosition.y.ToString("F3") +
-                      " rot=" + modelOffset.localEulerAngles +
-                      " renderers=" + bodyRenderers.Length);
-            return true;
-        }
-
-        /// <summary>World-space AABB of every Renderer under <paramref name="root"/>.</summary>
-        private static Bounds EncapsulateRendererBounds(GameObject root)
-        {
-            var renderers = root.GetComponentsInChildren<Renderer>(true);
-            var b = new Bounds(root.transform.position, Vector3.zero);
-            bool any = false;
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                if (renderers[i] == null) continue;
-                if (!any) { b = renderers[i].bounds; any = true; }
-                else b.Encapsulate(renderers[i].bounds);
-            }
-            return b;
-        }
-
-        /// <summary>
-        /// Point imported materials at URP/Lit and keep albedo texture / colour when possible.
-        /// Stops the classic "pink missing shader" look after dropping a Tripo FBX into a URP project.
-        /// Edits the material assets in place (graybox OK; a real art pass will author proper URP mats).
-        /// </summary>
-        private static void UpgradeImportedMaterialsToUrpLit(GameObject root)
-        {
-            var lit = Shader.Find(LitShader);
-            if (lit == null) return;
-
-            var renderers = root.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                var mats = renderers[i].sharedMaterials;
-                if (mats == null) continue;
-                for (int m = 0; m < mats.Length; m++)
-                {
-                    var mat = mats[m];
-                    if (mat == null || mat.shader == null) continue;
-                    string sn = mat.shader.name;
-                    if (sn.Contains("Universal Render Pipeline")) continue;
-
-                    Texture tex = null;
-                    if (mat.HasProperty("_BaseMap")) tex = mat.GetTexture("_BaseMap");
-                    else if (mat.HasProperty("_MainTex")) tex = mat.GetTexture("_MainTex");
-
-                    Color col = Color.white;
-                    if (mat.HasProperty("_BaseColor")) col = mat.GetColor("_BaseColor");
-                    else if (mat.HasProperty("_Color")) col = mat.GetColor("_Color");
-
-                    mat.shader = lit;
-                    if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
-                    if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
-                }
-            }
         }
 
         private static Renderer R(GameObject go) => go.GetComponent<Renderer>();
