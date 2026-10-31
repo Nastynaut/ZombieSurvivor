@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1a8846cb48d5064785eb90d1bb6dcc3, type: 3}
+  m_Name: CHR_SirAldric
+  m_EditorClassIdentifier: KnightSurvivors.Data::KnightSurvivors.Data.CharacterDefinition
+  id: sir_aldric
+  displayName: Sir Aldric
+  description: A knight of the fallen order.
+  portrait: {fileID: 0}
+  prefab: {fileID: 4065496543726143922, guid: aab16af453e5554458ddb6597797a3b7, type: 3}
+  baseStats: {fileID: 11400000, guid: ad7c221ff9ed7ae4d81bfe9ce5419e76, type: 2}
+  startingWeapon: {fileID: 11400000, guid: fdd2988e65edd0a4fadebde0c1f81e0f, type: 2}
+  bonusModifiers: []
+  unlockedByDefault: 1
+  unlock: {fileID: 0}
