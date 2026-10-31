@@ -59,9 +59,7 @@ namespace KnightSurvivors.EditorTools
                 var input = GameDataFactory.CreateInputActions();
 
                 EditorUtility.DisplayProgressBar("Knight Survivors", "Prefabs...", 0.35f);
-                // Wire CHR_SirAldric.visualModel (+ yaw) BEFORE BuildKnight so attach uses the SO, not a path.
-                var sirAldricDef = GameDataFactory.EnsureSirAldricArtRefs();
-                var knight = PlaceholderFactory.BuildKnight(m, input, sirAldricDef);
+                var knight = PlaceholderFactory.BuildKnight(m, input);
                 var shambler = PlaceholderFactory.BuildShambler(m);
                 var runner = PlaceholderFactory.BuildRunner(m);
                 var gems = new[] { PlaceholderFactory.BuildGem(0, m), PlaceholderFactory.BuildGem(1, m), PlaceholderFactory.BuildGem(2, m) };

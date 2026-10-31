@@ -40,10 +40,10 @@ namespace KnightSurvivors.Data
         public float mass = 1f;
         [Tooltip("0 = full knockback, 1 = immune.")]
         [Range(0f, 1f)] public float knockbackResist;
-        [Tooltip("Body radius in metres, used for separation, contact and hit checks. Set by data, never by the model (GDD 3.5). Shambler 0.3, Runner 0.2, Bloater 0.7, Spitter 0.25, Grave Knight 0.7, Rotting King 1.5.")]
-        public float radius;
-        [Tooltip("How many of this enemy the pool creates at startup (GDD 7.8). Only a starting size: the pool grows if needed.")]
-        public int prewarmCount;
+        [Tooltip("Body radius in metres, used for separation, contact and hit checks. Set by data, never by the model (GDD 3.5). Shambler 0.3, Runner 0.2, Bloater 0.7, Spitter 0.25, Grave Knight 0.7, Rotting King 1.5. Default matches Shambler so a menu-created asset is not radius 0.")]
+        public float radius = 0.3f;
+        [Tooltip("How many of this enemy the pool creates at startup (GDD 7.8). Only a starting size: the pool grows if needed. Default matches Shambler (400) so a menu-created asset is not 0.")]
+        public int prewarmCount = 400;
         [Tooltip("Ranged kiters stay between these distances (m) from their target. 0 / 0 = no kiting (GDD 9.6; Spitter 7 / 9).")]
         public float keepDistanceMin;
         public float keepDistanceMax;
@@ -53,6 +53,18 @@ namespace KnightSurvivors.Data
         public float crownValue = 0.05f;
         [Tooltip("Elites drop a chest. Not used until the chest PR.")]
         public bool dropsChest;
+        [Tooltip("HP fraction that unlocks phase 2 (Rotting King: 0.5). 0 = no phase 2 (DataTables §0.1).")]
+        [Range(0f, 1f)] public float phase2HpFraction;
+
+        [Tooltip("Move speed while in phase 2 (Rotting King: 2.8). 0 = keep moveSpeed (DataTables §0.1).")]
+        public float phase2MoveSpeed;
+
+        [Tooltip("Contact + attack damage multiplier at enrage (Rotting King: 2). 0 = do not read. Boss only (DataTables §0.1).")]
+        public float enrageDamageMult;
+
+        [Tooltip("Speed multiplier at enrage (Rotting King: 1.3). 0 = do not read. Boss only (DataTables §0.1).")]
+        public float enrageSpeedMult;
+
         [Tooltip("Special attacks (Bloater blast, boss slam). Not used in the graybox.")]
         public List<EnemyAttack> attackParams = new List<EnemyAttack>();
 
@@ -92,7 +104,13 @@ namespace KnightSurvivors.Data
         [Tooltip("Directions in degrees for cones / volleys, relative to the aim (e.g. -40, 0, +40).")]
         public float[] angleOffsets = new float[0];
         public float damage;
+        [Tooltip("Damage dealt to OTHER enemies (Bloater Death Blast: 50). Player damage stays in damage. 0 = none (DataTables §0.1).")]
+        public float damageToEnemies;
+        [Tooltip("Knockback speed in m/s (Ground Slam: 6). 0 = none (DataTables §0.1).")]
+        public float knockback;
         public float interval;
+        [Tooltip("Interval override while owner HP fraction ≤ phase2HpFraction (Ground Slam: 6). 0 = no override (DataTables §0.1).")]
+        public float phaseInterval;
         public float projectileSpeed;
         public EnemyDefinition summonEnemy;
         public int summonCount;

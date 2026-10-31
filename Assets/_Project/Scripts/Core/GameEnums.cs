@@ -28,7 +28,9 @@ namespace KnightSurvivors.Core
     {
         MaxHealth, Recovery, Armor, MoveSpeed, Might, Area, Cooldown, Amount, Duration,
         ProjectileSpeed, CritChance, CritMultiplier, PickupRadius, Luck, Growth, Greed,
-        Revivals, Rerolls, Banishes
+        Revivals, Rerolls, Banishes,
+        // Appended for limited level-up Skips (docs/DataTables.md §0.1). Never insert in the middle.
+        Skips
     }
 
     /// <summary>

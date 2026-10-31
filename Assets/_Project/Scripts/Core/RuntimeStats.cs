@@ -40,6 +40,7 @@ namespace KnightSurvivors.Core
         public int revivals;
         public int rerolls = 2;
         public int banishes = 1;
+        public int skips = 3;
 
         /// <summary>GDD 3.1: the cooldown multiplier can never go below 0.40 (attacks at most 2.5x faster).</summary>
         public const float CooldownFloor = 0.40f;
@@ -76,6 +77,7 @@ namespace KnightSurvivors.Core
                 case StatType.Revivals: return revivals;
                 case StatType.Rerolls: return rerolls;
                 case StatType.Banishes: return banishes;
+                case StatType.Skips: return skips;
                 default: return 0f;
             }
         }
@@ -104,6 +106,7 @@ namespace KnightSurvivors.Core
                 case StatType.Revivals: revivals = Mathf.RoundToInt(value); break;
                 case StatType.Rerolls: rerolls = Mathf.RoundToInt(value); break;
                 case StatType.Banishes: banishes = Mathf.RoundToInt(value); break;
+                case StatType.Skips: skips = Mathf.RoundToInt(value); break;
             }
         }
 

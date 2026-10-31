@@ -200,7 +200,8 @@ namespace KnightSurvivors.Pickups
             for (int i = 0; i < gems.Count; i++)
             {
                 var nearest = PlayerRegistry.GetNearestAlivePlayer(gems[i].simPosition);
-                if (nearest == null) return;
+                // Skip this gem only — other gems may still have a living player nearby.
+                if (nearest == null) continue;
                 gems[i].magnetized = true;
                 gems[i].targetPlayer = nearest;
                 gems[i].speed = runConfig != null && runConfig.xpCurve != null ? runConfig.xpCurve.magnetSpeed : DefaultMagnetSpeed;
