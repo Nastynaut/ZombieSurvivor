@@ -43,8 +43,20 @@ namespace KnightSurvivors.Data
         [Tooltip("Metres. For AimDirection weapons this is the assisted-aim range used to find the nearest enemy.")]
         public float range = 6f;
 
-        [Tooltip("Seconds between hits on the same enemy for lingering attacks (orbits, zones).")]
+        [Tooltip("Seconds between hits on the same enemy for lingering attacks (orbits, zones). 0 = n/a (DataTables §1.1).")]
         public float hitInterval = 0.5f;
+
+        [Tooltip("Half-angle of a lob spread in degrees (Throwing Axes: 20 = ±20°). 0 = no spread (DataTables §0.1).")]
+        public float spreadHalfAngle;
+
+        [Tooltip("HP healed per kill (Executioner's Greatsword: 1). 0 = none (DataTables §0.1).")]
+        public float killHeal;
+
+        [Tooltip("Max HP/s from killHeal (Executioner's Greatsword: 10). 0 = none (DataTables §0.1).")]
+        public float killHealCapPerSec;
+
+        [Tooltip("True if projectiles return to the player (Bloodstorm Cleavers). DataTables §0.1.")]
+        public bool boomerang;
 
         [Tooltip("Highest level this weapon can reach.")]
         public int maxLevel = 8;

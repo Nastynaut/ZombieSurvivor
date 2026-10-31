@@ -180,6 +180,8 @@ namespace KnightSurvivors.Player
             Loadout.Initialize(this, character);
             State.rerollsLeft = State.stats.rerolls;
             State.banishesLeft = State.stats.banishes;
+            // Skips start at the runtime stat (base 3 + any meta_skip ranks already applied).
+            State.skipsLeft = State.stats.skips;
             Health.ResetHealth(State.stats.maxHealth);
             Health.armor = State.stats.armor;
             State.currentHealth = Health.CurrentHealth;
@@ -204,6 +206,10 @@ namespace KnightSurvivors.Player
         private void FixedUpdate()
         {
             if (State.isDead) return;
+
+            // Keep SimulatedPosition on the tick pose (same role as Enemy.simPosition for zombies).
+            // Motor already moved the root this FixedUpdate; weapons / contact read SimulatedPosition.
+            Health.SimulatedPosition = transform.position;
 
             // Recovery = HP regenerated per second (GDD 3.1).
             if (State.stats.recovery > 0f) Health.Heal(State.stats.recovery * Time.fixedDeltaTime);

@@ -34,7 +34,8 @@ namespace KnightSurvivors.Progression
     ///     slot of that type is free (weight 1.0). Banished items never show. No duplicates in one roll.
     ///   * Nothing left? Show the fallback cards (Gold Pouch +25 Crowns, Roast Chicken heal 30).
     ///   * Reroll (2 per run) redraws; Banish (1 per run) removes an item for the rest of the run;
-    ///     Skip is unlimited and gives +3 Crowns and heals 5%.
+    ///     Skip gives +3 Crowns and heals 5%, and spends 1 skipsLeft (base PlayerStats.skips = 3;
+    ///     meta_skip adds +1 per rank, max 2 ranks). Chest spin dismiss (when built) costs NO skip.
     /// The graybox UI shows pick and skip; reroll and banish work in code (UI buttons deferred).
     ///
     /// Co-op note: XP is shared, so a level-up is offered to players in turn (round-robin).
@@ -43,7 +44,11 @@ namespace KnightSurvivors.Progression
     {
         public RunConfig runConfig;
 
+        // Level-up fallback "Gold Pouch" card (GDD 4.3 / DataTables §2.3).
+        // DO NOT reuse this for the world brazier Coin Pouch — that pays BrazierCoinPouchCrowns (10).
         public const int GoldPouchCrowns = 25;
+        // World brazier Coin Pouch payout (GDD 6.1). Kept as its own constant so the two never share a number.
+        public const int BrazierCoinPouchCrowns = 10;
         public const float RoastChickenHeal = 30f;
 
         public IReadOnlyList<LevelUpOffer> CurrentOffers => offers;
@@ -274,14 +279,23 @@ namespace KnightSurvivors.Progression
             FinishOne();
         }
 
-        public void Skip()
+        /// <summary>
+        /// Skip the level-up: +skipCrowns Crowns and heal skipHealPct of max HP.
+        /// Costs 1 skipsLeft. Returns false (and does nothing) when the player is out of skips.
+        /// Chest spin dismiss is a separate path and must NEVER call this (no skip cost).
+        /// </summary>
+        public bool Skip()
         {
-            if (!IsShowing) return;
+            if (!IsShowing || CurrentPlayer == null) return false;
+            if (CurrentPlayer.State.skipsLeft <= 0) return false;
+
+            CurrentPlayer.State.skipsLeft--;
             int crowns = Rules != null ? Rules.skipCrowns : 3;
             float heal = Rules != null ? Rules.skipHealPct : 0.05f;
             run.AddCrowns(crowns * run.PartyGreed());
             CurrentPlayer.Health.Heal(CurrentPlayer.Health.maxHealth * heal);
             FinishOne();
+            return true;
         }
 
         public bool Reroll()

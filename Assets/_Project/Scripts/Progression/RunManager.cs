@@ -92,12 +92,14 @@ namespace KnightSurvivors.Progression
             State.elapsedTicks++;
             State.elapsedTime = State.elapsedTicks * GameTick.TickDelta;
 
-            // 10 Crowns for every full minute survived.
+            // GDD 6.1: 10 Crowns for every full minute survived.
+            // Reviewer: use BrazierCoinPouchCrowns (also 10) — no bare literal. Same number as the
+            // world brazier Coin Pouch today; if those payouts ever diverge, split into a new constant.
             int minutes = Mathf.FloorToInt(State.elapsedTime / 60f);
             while (minutesPaid < minutes)
             {
                 minutesPaid++;
-                AddCrowns(10f * PartyGreed());
+                AddCrowns(LevelUpService.BrazierCoinPouchCrowns * PartyGreed());
             }
         }
 
