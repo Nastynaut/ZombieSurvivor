@@ -1,8 +1,9 @@
 # Knight Survivors: Placeholder Art Spec
 
-**Owner:** Asset Designer · **For:** Unity Coder · **Last updated:** 2026-10-28
-**Matches:** `docs/ArtDirection.md` (palette, isometric readability §7, zombie color-coding §7.2, grey floor §7.3, blood §4, co-op tint slots §8) and `docs/GDD.md` (enemy list §3.5, XP gems §4.2, camera, 150 × 150 m map).
-**Rule (Supervisor, 2026-10-28):** `docs/GDD.md` is canonical for numbers and behavior (counts, timings, sizes, caps); this spec is canonical for look (shapes, colors, materials). Where they disagree on a number, the GDD wins.
+**Owner:** Asset Designer · **For:** Unity Coder · **Last updated:** 2026-10-30
+**Synced to:** `docs/GDD.md` **v0.3** (numbers). Look still owned by this spec; ArtDirection for final art.
+**Matches:** `docs/ArtDirection.md` (palette, isometric readability §7, zombie color-coding §7.2, grey floor §7.3, blood §4, co-op tint slots §8) and `docs/GDD.md` v0.3 (enemy list §3.5, XP gems §4.2, camera, 150 × 150 m map, pool/telegraph overrides in §3.5.2 / §7.8).
+**Rule (Supervisor, 2026-10-28):** `docs/GDD.md` is canonical for numbers and behavior (counts, timings, sizes, caps); this spec is canonical for look (shapes, colors, materials). Where they disagree on a number, the GDD wins. This file was updated 2026-10-30 so its §3.8 / §6 numbers match GDD v0.3 overrides.
 **Decision (Dustin):** no asset purchases for now. Everything below can be built from **Unity primitives + URP Lit/Unlit materials only**. Free packs are deferred (§8); nothing here depends on one.
 
 ---
@@ -198,7 +199,7 @@ PF_PH_Zombie_Spitter
    ├─ Sac      Sphere    (0, 1.20, 0.28)   scale (0.40, 0.40, 0.40)   M_PH_Eye_Spitter   ← the read
    └─ Arms     Cube      (0, 0.95, 0)      scale (0.70, 0.10, 0.10)   M_PH_Zombie_Skin   ← arms out sideways, not forward
 ```
-**Bile glob projectile** `PF_PH_BileGlob`: Sphere scale 0.3, `M_PH_Eye_Spitter`, pooled (cap 32).
+**Bile glob projectile** `PF_PH_BileGlob`: Sphere scale 0.3, `M_PH_Eye_Spitter`, pooled (**prewarm 32**, growable — GDD §7.8 override; was a hard cap of 32).
 
 ### 3.5 Grave Knight (elite): `PF_PH_Elite_GraveKnight` (GDD `grave_knight`, **1.6× scale**)
 **Size:** 2.9 m tall (1.8 m × 1.6), 1.4 m wide with pauldrons. **Pivot:** feet. **Type color:** cyan-white `#7FF3FF`. **Casts shadows.**
@@ -238,9 +239,9 @@ Shapes and timings come from GDD §3.5. Every telegraph is a pooled flat mesh at
 
 | Attack (GDD) | Prefab | Shape and size | Timing | Pool |
 |---|---|---|---|---|
-| Plague Spitter spit | `PF_PH_Tele_AimLine` | Flat Quad (rot (90,0,0)), width **0.3 m** (the bile glob's diameter), pivot at the Spitter's sac, length = distance to the target at windup start, clamped to 9 m. Plus the sac pulse: Sac scale 1.0 ↔ 1.25 at 4 Hz. | 0.5 s, then the glob fires along the line (8 m/s) | 32 |
-| Grave Knight charge | `PF_PH_Tele_ChargeLine` | Flat Quad, width 1.0 m (about the elite's body width), length **8 m**, pivot at the elite's feet pointing along the charge | 0.8 s windup | 4 |
-| Bloater death blast | `PF_PH_Tele_Disc` | Cylinder disc scale (4.4, 0.005, 4.4) = **2.2 m radius**, centered on the Bloater | 0.8 s swell | 16 |
+| Plague Spitter spit | `PF_PH_Tele_AimLine` | Flat Quad (rot (90,0,0)), width **0.3 m** (the bile glob's diameter), pivot at the Spitter's sac, length **fixed 9 m** (= spit `range`; GDD §3.5.2 override — not distance-to-target clamped). Plus the sac pulse: Sac scale 1.0 ↔ 1.25 at 4 Hz. | 0.5 s, then the glob fires along the line (8 m/s) | 32 |
+| Grave Knight charge | `PF_PH_Tele_ChargeLine` | Flat Quad, width **1.4 m** (= 2 × elite `radius` 0.7; GDD §3.5.2 override of 1.0 m), length **8 m**, pivot at the elite's feet pointing along the charge | 0.8 s windup | 4 |
+| Bloater death blast | `PF_PH_Tele_Disc` | Cylinder disc scale (4.4, 0.005, 4.4) = **2.2 m radius**, centered on the Bloater | 0.8 s swell | **32** (shared with Ground Slam; GDD §7.8 override of 16) |
 | Rotting King Ground Slam | `PF_PH_Tele_Disc` (scaled) | Cylinder disc scale (8, 0.005, 8) = **4 m radius**, centered on the boss | 1.2 s | shared with the disc pool |
 | Rotting King Raise the Dead | `PF_PH_Tele_SpawnMarker` | **12 markers** evenly spaced (every 30°) on a **6 m ring** around the player's position at roar start. Each marker = Cylinder disc scale (1.0, 0.005, 1.0) (1 m across, a bit wider than a Shambler) + a thin upright Cube (0.08, 0.6, 0.08) "grave stake" in the center, both `M_PH_Telegraph`. Each Shambler spawns on its marker. | 1.0 s roar, then the 12 Shamblers spawn | 24 |
 | Rotting King Bile Wave (phase 2) | `PF_PH_Tele_Cone` | **3 cones of 30°, 10 m long**, from the boss toward the player: centered at −40°, 0°, +40° from the aim direction (10° gaps you can stand in). Each cone is a flat fan mesh (8 segments, radius 10 m), generated once in code at startup and shared by all instances (a primitive can't make a sector). | 0.8 s | 6 |
@@ -327,7 +328,7 @@ Built-in **Particle System (Shuriken)**, pooled via `PoolService` with `AutoDesp
 
 Emit counts are **GDD §7.4 numbers** (driven by `HitFeedbackEntry.bloodParticles`), not art choices. The prefab only sets the look; the Max Particles values above are the GDD maximum for each prefab.
 
-**Pool sizes and caps** (GDD §7.4 / §7.8, ArtDirection §4.1): prewarm Hit 64, Crit 24, Kill 48, Big 8. **Max 96 active blood systems** and **about 3,000 live particles**. When the 96 cap is hit, **steal the oldest** (this budget is the one pool that doesn't grow).
+**Pool sizes and caps** (GDD §7.4 / §7.8, ArtDirection §4.1): prewarm Hit 64, Crit 24, Kill 48, **Big 16** (GDD §7.8 override of 8 — Bloater Herd of 15). **Max 96 active blood systems** and **about 3,000 live particles**. When the 96 cap is hit, **steal the oldest** (this budget is the one pool that doesn't grow).
 In `OnSpawned()`: `ps.Clear(true); ps.Play(true);`. In `OnDespawned()`: `ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear)`.
 Spawn at the zombie's `Socket_Hit`, rotated toward `−attackerDirection`.
 
