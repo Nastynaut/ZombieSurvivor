@@ -34,7 +34,7 @@ namespace KnightSurvivors.Progression
     ///     slot of that type is free (weight 1.0). Banished items never show. No duplicates in one roll.
     ///   * Nothing left? Show the fallback cards (Gold Pouch +25 Crowns, Roast Chicken heal 30).
     ///   * Reroll (2 per run) redraws; Banish (1 per run) removes an item for the rest of the run;
-    ///     Skip is unlimited and gives +3 Crowns and heals 5%.
+    ///     Skip gives +3 Crowns and heals 5% (limited uses land in the skips PR; base is PlayerStats.skips).
     /// The graybox UI shows pick and skip; reroll and banish work in code (UI buttons deferred).
     ///
     /// Co-op note: XP is shared, so a level-up is offered to players in turn (round-robin).
@@ -43,7 +43,11 @@ namespace KnightSurvivors.Progression
     {
         public RunConfig runConfig;
 
+        // Level-up fallback "Gold Pouch" card (GDD 4.3 / DataTables §2.3).
+        // DO NOT reuse this for the world brazier Coin Pouch — that pays BrazierCoinPouchCrowns (10).
         public const int GoldPouchCrowns = 25;
+        // World brazier Coin Pouch payout (GDD 6.1). Kept as its own constant so the two never share a number.
+        public const int BrazierCoinPouchCrowns = 10;
         public const float RoastChickenHeal = 30f;
 
         public IReadOnlyList<LevelUpOffer> CurrentOffers => offers;

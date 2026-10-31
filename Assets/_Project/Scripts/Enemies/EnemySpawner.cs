@@ -10,6 +10,7 @@ namespace KnightSurvivors.Enemies
     /// Time-based spawner that follows the SpawnSchedule asset (GDD 5), one WaveEntry per minute:
     ///   * If alive &lt; targetAlive, spawn at spawnRatePerSec x 2 (catch up quickly).
     ///   * Otherwise spawn at spawnRatePerSec, unless the hard cap (350 for 1 player) is reached.
+    ///     After bossMinute the trickle stops at targetAlive (cap 40), not hardCap.
     ///   * Each zombie appears 20-24 m from a player (round-robin over living players), just off
     ///     screen. 60% of spawns are pushed into a +-60 degree cone in front of where that player is walking,
     ///     so you run INTO the horde instead of leaving it behind.
@@ -72,9 +73,26 @@ namespace KnightSurvivors.Enemies
             int targetAlive = Mathf.RoundToInt(entry.targetAlive * countMult);
             int alive = enemies.AliveCount;
 
+            // Boss trickle (minute >= bossMinute): GDD "cap 40 live" — stop at targetAlive, do not
+            // keep filling toward hardCap 350. Earlier minutes still use hardCap as the upper bound.
+            bool bossTrickle = Schedule.bossMinute > 0f && run.ElapsedMinutes >= Schedule.bossMinute;
+            int spawnCap = bossTrickle ? targetAlive : hardCap;
+
+            // Enrage (20:00 / DataTables §4.2): after enrageTimeSeconds, IF the schedule boss is still
+            // alive, replace the minute-15 rate with enrageSpawnRatePerSec. targetAlive 40 and the
+            // Shambler mix stay as written. No boss (slice) or a dead boss → keep the normal rate.
+            float baseRate = entry.spawnRatePerSec;
+            if (Schedule.enrageTimeSeconds > 0f
+                && run.elapsedTime >= Schedule.enrageTimeSeconds
+                && Schedule.enrageSpawnRatePerSec > 0f
+                && IsScheduleBossAlive())
+            {
+                baseRate = Schedule.enrageSpawnRatePerSec;
+            }
+
             float rate;
-            if (alive < targetAlive) rate = entry.spawnRatePerSec * 2f;
-            else if (alive < hardCap) rate = entry.spawnRatePerSec;
+            if (alive < targetAlive) rate = baseRate * 2f;
+            else if (alive < spawnCap) rate = baseRate;
             else rate = 0f;
 
             rate *= countMult;
@@ -84,7 +102,7 @@ namespace KnightSurvivors.Enemies
             if (rate <= 0f) spawnBudget = 0f;
 
             float minute = run.ElapsedMinutes;
-            while (spawnBudget >= 1f && enemies.AliveCount < hardCap)
+            while (spawnBudget >= 1f && enemies.AliveCount < spawnCap)
             {
                 spawnBudget -= 1f;
                 var def = PickEnemy(entry, minute);
@@ -92,6 +110,24 @@ namespace KnightSurvivors.Enemies
                 if (!TryGetSpawnPoint(out Vector3 point)) break;
                 enemies.Spawn(def, point, minute);
             }
+        }
+
+        /// <summary>
+        /// True when the schedule's boss definition has at least one living instance.
+        /// Used so enrage (DataTables §4.2) only fires while the boss is alive.
+        /// </summary>
+        private bool IsScheduleBossAlive()
+        {
+            if (Schedule == null || Schedule.boss == null || enemies == null) return false;
+            var alive = enemies.Alive;
+            for (int i = 0; i < alive.Count; i++)
+            {
+                var e = alive[i];
+                if (e == null || e.Definition != Schedule.boss) continue;
+                if (e.Health != null && e.Health.IsDead) continue;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Weighted pick from the minute's mix, skipping types that aren't allowed yet (firstMinute).</summary>
@@ -130,7 +166,8 @@ namespace KnightSurvivors.Enemies
             Vector3 moveDir = anchor.Motor.LastMoveDirection;
             if (moveDir.sqrMagnitude > 0.01f && rng.Chance(Schedule.moveDirBias))
             {
-                angle = Mathf.Atan2(moveDir.z, moveDir.x) + rng.Range(-60f, 60f) * Mathf.Deg2Rad;
+                float cone = Schedule.moveDirConeHalfAngle > 0f ? Schedule.moveDirConeHalfAngle : 60f;
+                angle = Mathf.Atan2(moveDir.z, moveDir.x) + rng.Range(-cone, cone) * Mathf.Deg2Rad;
             }
             else
             {

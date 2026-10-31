@@ -205,6 +205,10 @@ namespace KnightSurvivors.Player
         {
             if (State.isDead) return;
 
+            // Keep SimulatedPosition on the tick pose (same role as Enemy.simPosition for zombies).
+            // Motor already moved the root this FixedUpdate; weapons / contact read SimulatedPosition.
+            Health.SimulatedPosition = transform.position;
+
             // Recovery = HP regenerated per second (GDD 3.1).
             if (State.stats.recovery > 0f) Health.Heal(State.stats.recovery * Time.fixedDeltaTime);
             State.currentHealth = Health.CurrentHealth;
