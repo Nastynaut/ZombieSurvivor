@@ -51,6 +51,34 @@ namespace KnightSurvivors.EditorTools
             return asset;
         }
 
+
+        /// <summary>
+        /// Creates/loads CHR_SirAldric and wires <see cref="CharacterDefinition.visualModel"/> + yaw
+        /// BEFORE <see cref="PlaceholderFactory.BuildKnight"/> so the attach path has no hardcoded FBX string.
+        /// Called from GrayboxSceneBuilder ahead of prefab build. CreateAll reasserts the same defaults later.
+        /// </summary>
+        public static CharacterDefinition EnsureSirAldricArtRefs()
+        {
+            // First import creates Unity's default .meta (we never hand-write FBX import settings).
+            if (System.IO.File.Exists(System.IO.Path.Combine(
+                    Application.dataPath, "Art/Characters/SirAldric/SirAldric.fbx")))
+            {
+                AssetDatabase.ImportAsset(PlaceholderFactory.SirAldricFbxPath,
+                    ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            var knight = Asset<CharacterDefinition>("Characters", "CHR_SirAldric");
+            knight.id = "sir_aldric";
+            knight.displayName = "Sir Aldric";
+            knight.visualModel = AssetDatabase.LoadAssetAtPath<GameObject>(PlaceholderFactory.SirAldricFbxPath);
+            // Corrected default: +90° yaw after Rx(-90). File front -X → Unity +Z.
+            // If Play shows 180° wrong, change this (or ModelOffsetYaw on the prefab) by ±180.
+            knight.visualModelYawOffset = 90f;
+            EditorUtility.SetDirty(knight);
+            AssetDatabase.SaveAssets();
+            return knight;
+        }
+
         /// <summary>
         /// Build / refresh every data asset from docs/DataTables.md.
         /// Leaves SPN_Slice and CFG_RunConfig's slice wiring (10-minute schedule, Longsword + 3 passives)
@@ -122,6 +150,10 @@ namespace KnightSurvivors.EditorTools
             knight.id = "sir_aldric";
             knight.displayName = "Sir Aldric";
             knight.prefab = knightPrefab;
+            // Builder may already have filled these via EnsureSirAldricArtRefs; CreateAll reasserts defaults.
+            knight.visualModel = AssetDatabase.LoadAssetAtPath<GameObject>(PlaceholderFactory.SirAldricFbxPath);
+            // 90° after Z-up fix: Tripo file front is -X → Unity +Z. See ModelOffsetYaw / PlaceholderFactory comments.
+            knight.visualModelYawOffset = 90f;
             knight.baseStats = stats;
             knight.startingWeapon = longsword;
             knight.unlockedByDefault = true;

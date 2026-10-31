@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9bb7c05887d8814f8a7bb470b2bb9bc, type: 3}
+  m_Name: CFG_PoolPrewarm
+  m_EditorClassIdentifier: KnightSurvivors.Pooling::KnightSurvivors.Pooling.PoolPrewarmConfig
+  entries:
+  - prefab: {fileID: 6324454304325351749, guid: f025548a533ba2b459419da66e5a61e3, type: 3}
+    prewarmCount: 400
+  - prefab: {fileID: 5653828119414810458, guid: 663cbab4d8a5f454a97772f3447abf58, type: 3}
+    prewarmCount: 64
+  - prefab: {fileID: 5478652434934439010, guid: eee7f593962d38c4bb2d82a7ed640a87, type: 3}
+    prewarmCount: 32

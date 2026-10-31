@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f16c25db18b762f438c62269495d28ba, type: 3}
+  m_Name: ENM_Runner
+  m_EditorClassIdentifier: KnightSurvivors.Data::KnightSurvivors.Data.EnemyDefinition
+  id: runner
+  displayName: Runner
+  tier: 0
+  behavior: 0
+  maxHealth: 6
+  hpPerMinute: 0.25
+  moveSpeed: 3.8
+  contactDamage: 4
+  damagePerMinute: 0.05
+  contactInterval: 0.5
+  xpValue: 1
+  mass: 0.7
+  knockbackResist: 0
+  radius: 0.2
+  prewarmCount: 200
+  keepDistanceMin: 0
+  keepDistanceMax: 0
+  firstMinute: 2
+  crownValue: 0.05
+  dropsChest: 0
+  attackParams: []
+  prefab: {fileID: 3344842589106410162, guid: 6b47f94271ebbbd4f9f5e6938f4e7aac, type: 3}
